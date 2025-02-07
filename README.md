@@ -1,21 +1,23 @@
 # omnisensor_433
-## An rtl_433-compatible multi-sensor system
+## A Multi-Sensor System Based on `rtl_433`
+
+Omnisensor\_433 supports transmission of data from multiple sensors and types of sensors from a single microcontroller using a single, flexible `rtl_433` message transmission protocol.
 
 The omnisensor_433 system includes:
-*  a microcontoller program, `omni.ino`, to collect sensor data and transmit it via an ISM-band (e.g., 433MHz) transmitter
+*  a microcontroller program, `omni.ino`, to collect sensor data and transmit it via an ISM-band (e.g., 433MHz) transmitter
 *  an `rtl_433` decoder, `omni.c`, to decode those transmissions
 *  a flexible protocol that enables up to 16 different formats for the transmitted 8-byte data payload.
 
 ## Getting Started
 
-To get started, you need:
+To get started, you will need:
 *  a system running `rtl_433` (RTL_SDR dongle and `rtl_433` software installed and operational);
 *  a Raspberry Pi Pico-2 microcontroller
 *  a computer system running the Arduino IDE with Pico-2 support installed
 *  a 433MHz transmitter (or other ISM-band frequency legal in your locale): available from Amazon, for example, for ~$2US.
 
 Then follow these steps:
-1.  Download the omnisensor package (http://github.com/hdtodd/omnisensor_433).
+1.  Download the omnisensor\_433 package (http://github.com/hdtodd/omnisensor_433).
 2.  Connect pin 4 of the Pico 2 to the data pin of your transmitter; transmitter GND to Pico GND; transmitter VCC to Pico VSYS or 3V3.
 3.  Copy the `omni.c` decoder file into the `rtl_433/src/devices` directory on your rtl_433 system and follow the instructions for installing a new decoder into `rtl_433`.  Stop any instances of `rtl_433` you might already have running on that system.
 4.  Verify that `omni` is one of the protocols your new `rtl_433` will recognize and decode: `rtl_433 -R` will list all the protocols; `omni` should be at or near the end of that list.  Record its protocol number.

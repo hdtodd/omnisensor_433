@@ -1,5 +1,5 @@
 /** @file
-    Omni sensor protocol.
+    Omni multi-sensor protocol.
 
     Copyright (C) 2025 H. David Todd <hdtodd@gmail.com>
 

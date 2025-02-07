@@ -1,5 +1,5 @@
 /* -*- c++ -*-
-  omni.ino:  omni multiprotocol ISM-band sensor transmission 
+  omni.ino:  omnisensor multi-protocol ISM-band sensor transmission 
 
   This program uses a 433MHz transmitter and Arduino (or similar device
   supported on the Arduino IDE) to send temperature/humidity

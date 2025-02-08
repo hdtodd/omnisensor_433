@@ -25,7 +25,7 @@ Then follow these steps:
 6.  Connect the Pico 2 via USB into the computer running the Arduino IDE.
 7.  Open the `omni.ino` file in the Arduino IDE; set the device type to Pico 2 and the port to the USB port to which the Pico 2 is attached; compile and download the `omni.ino` code into the Pico 2.
 8.  Open the Arduino IDE monitoring screen to verify that the Pico 2 is composing and transmitting messages.
-9.  Start your *new* `rtl_433` with `rtl_433 -R <omni protocol number>`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
+9.  Start your *new* `rtl_433` with `rtl_433 -R <omni protocol number> -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
 10.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file: the only change will be that it now reports packets it receives from an `omni` device with a format that matches those that it knows about.
 
 Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, and its VCC (VSYS) USB voltage in volts.

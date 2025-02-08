@@ -10,12 +10,12 @@
 */
 
 /**
-Omni sensor protocol.
+Omni multisensor protocol.
 
 The protocol is for the extensible wireless sensor 'Omni'
 -  Single transmission protocol
 -  Flexible 64-bit data payload field structure
--  Extensible to a total of 15 possible multi-sensor data formats
+-  Extensible to a total of 16 possible multi-sensor data formats
 
 The 'sensor' is actually a programmed microcontroller (e.g.,
 Raspberry Pi Pico 2 or similar) with multiple possible data sensor
@@ -42,16 +42,29 @@ The message is 10 bytes / 20 nibbles:
 - crc8 is 1 byte of CRC8 checksum of the first 9 bytes:
       polynomial 0x97, initial 0x00
 
-A format=1 message format is provided as an example.  It is an
-indoor-outdoor temperature/humidity/pressure sensor with fields:
+A format=0 message simply reports the core temperature and input power
+voltage of the microcontroller.  For format=0 messages, the message
+nibbles are to be read as:
+     fi tt t0 00 00 00 00 00 vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
+     0: bytes should be 0
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+            divisor polynomial 0x97, no reflections or inversions
+
+A format=1 message format is provided as a more complete example.
+It is an indoor-outdoor temperature/humidity/pressure sensor with fields:
 indoor temp, outdoor temp, indoor humidity, outdoor humidity,
 barometric pressure, sensor power VCC.  The data fields are binary
-values, 2's complement for temperatures.  For format=1 messages,, the
+values, 2's complement for temperatures.  For format=1 messages, the
 message nibbles are to be read as:
-     yi 11 12 22 hh gg pp pp vv cc
+     fi 11 12 22 hh gg pp pp vv cc
 
-     y: type of datagram, 1-15 (0 not allowed)
-     i: id of device, 1-15 (0 not allowed)
+     f: format of datagram, 0-15
+     i: id of device, 0-15
      1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
      2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
      h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
@@ -63,8 +76,8 @@ message nibbles are to be read as:
 */
 #include "decoder.h"
 
+#define OMNI_MSGFMT_00 0x00
 #define OMNI_MSGFMT_01 0x01
-#define OMNI_MSGFMT_15 0x0F
 
 static int omni_decode(r_device *, bitbuffer_t *);
 
@@ -83,10 +96,12 @@ static char const *const output_fields_01[] = {
         NULL,
 };
 
-static char const *const output_fields_15[] = {
+static char const *const output_fields_00[] = {
         "model",
         "fmt",
         "id",
+	"temperature_C",
+	"voltage_V",
         "payload",
         "mic",
         NULL,
@@ -102,7 +117,7 @@ r_device omni = {
         .gap_limit   = 500,  // long gap (with short pulse) is ~400 us, sync gap is ~600 us
         .reset_limit = 1250, // maximum gap is 1250 us (long gap + longer sync gap on last repeat)
         .decode_fn   = &omni_decode,
-        .fields      = output_fields_15,
+        .fields      = output_fields_00,
 };
 
 static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
@@ -133,18 +148,36 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
         return DECODE_FAIL_MIC;
     }
 
-    // Just another sanity check
-    if (b[0] == 0x00) {
-        decoder_log(decoder, 1, __func__, "Omni: type or address = 0!");
-        return DECODE_FAIL_SANITY;
-    }
-
     // OK looks like we have a valid packet.  What format?
     message_fmt = b[0] >> 4;
     id          = b[0] & 0x0F;
 
     // Decode that format, if we know it
     switch (message_fmt) {
+
+    case OMNI_MSGFMT_00:
+        omni.fields = output_fields_00;
+        char hexstring[50];
+        char *ptr = &hexstring[0];
+        for (int ij = 1; ij < 9; ij++)
+            ptr += sprintf(ptr, "0x%02x ", b[ij]);
+        itemp_c     = ((double)((int32_t)(((((uint32_t)b[1]) << 24) | ((uint32_t)(b[2]) & 0xF0) << 16)) >> 20)) / 10.0;
+        volts       = ((double)(b[8])) / 100.0 + 3.00;
+
+        // Make the data descriptor
+        /* clang-format off */
+	data = data_make(
+	    "model",           "",                                               DATA_STRING, "Omni_00",
+	    "fmt",             "Format",                                         DATA_INT,     message_fmt,
+	    "id",              "Id",                                             DATA_INT,     id,
+	    "temperature_C"  , "Core Temperature",   DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  itemp_c, 
+	    "voltage_V",       "VCC voltage",        DATA_FORMAT, "%.2f V",      DATA_DOUBLE,  volts,
+            "payload",         "Payload",                                        DATA_STRING,  hexstring,
+	    "mic",             "Integrity",                                      DATA_STRING,  "CRC",
+	    NULL);
+        /* clang-format on */
+        break;
+
     case OMNI_MSGFMT_01:
         omni.fields = output_fields_01;
         itemp_c     = ((double)((int32_t)(((((uint32_t)b[1]) << 24) | ((uint32_t)(b[2]) & 0xF0) << 16)) >> 20)) / 10.0;
@@ -170,25 +203,6 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
 	    NULL);
         /* clang-format on */
         break;
-    case OMNI_MSGFMT_15:
-        omni.fields = output_fields_15;
-        char hexstring[50];
-        char *ptr = &hexstring[0];
-        for (int ij = 1; ij < 9; ij++)
-            ptr += sprintf(ptr, "0x%02x ", b[ij]);
-
-        // Make the data descriptor
-        /* clang-format off */
-	data = data_make(
-	    "model",           "",                                               DATA_STRING, "Omni_15",
-	    "fmt",             "Format",                                         DATA_INT,     message_fmt,
-	    "id",              "Id",                                             DATA_INT,     id,
-            "payload",         "Payload",                                        DATA_STRING,  hexstring,
-	    "mic",             "Integrity",                                      DATA_STRING,  "CRC",
-	    NULL);
-        /* clang-format on */
-        break;
-
     default:
         decoder_log(decoder, 1, __func__, "Unknown message type");
         return DECODE_FAIL_SANITY;

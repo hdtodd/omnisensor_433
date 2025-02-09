@@ -2,25 +2,38 @@
 
   omni.ino
 
-  This program uses a 433MHz transmitter and Raspberry Pico 2 or similar 
-  device supported on the Arduino IDE to transmit data to computer systems
-  running rtl_433 (https://github.com/merbanan/rtl_433).
+  This program uses a 433MHz transmitter and Arduino (or similar device
+  supported on the Arduino IDE) to send temperature/humidity
+  readings in a format compatible with the Acurite 609TXC protocol.
+  See the src/device/lacrosse_ws7000.c file in the rtl_433 distribution
+  (https://github.com/merbanan/rtl_433) for details about the packet
+  format.  The data packet format created here matches the format
+  recognized by rtl_433 for the Lacrosse WS7000-20.
 
-  The "omni" transmission protocol is an 80-bit packet that has
-  a 4-bit message format field, 4-bit device id field, 8 bytes of
-  data, and one byte of CRC8 checksum.  The packet is repeated four times
-  in each transmission.  Transmissions are 30 sec apart (adjustable).
-  The transmission includes a preamble of 4 sync pulses before each
-  data packet.  The timings of the pulses and gaps for each of the
-  signals are detailed in the "SIGNALS" array.
+  This program executes on the Arduino Uno R3 but is constrained by the
+  limited 2K memory limit for variables.  Take care in modifying the
+  program as changes in memory requirements may cause execution errors.
 
-  The 4-bit format field allows for 16 different packet formats.
-  Formats 00 and 01 are defined in this program and are recogized by
-  the corresponding rtl/src/devices/omni.c decoder program that can
-  be installed in rtl_433. This omni.ino program and the corresponding
-  omni.c decoder provide a model for extending the possible sensor
-  and data types that omni can transmit and rtl_433 can recognize.
-  
+  The Lacrosse WS7000-20 remote sensor transmits temperature,
+  humidity, and barometric pressure readings. A transmission frame
+  is 81 bits long (for the -20 model).  A "0" bit is 800us high
+  followed by 400us low and a "1" bit is 400us high followed
+  by 800us low.
+
+  The frame begins with 10 "0" bits followed by 1 "1" bit.
+  The data follow that preamble as 14 4-bit nibbles, separated
+  from each other by a "1" bit, and each nibble has the
+  least-significant bit first.  Soo the data values must have
+  their bit patterns reversed as they're inserted into the frame.
+  The data are BCD-encoded values representing the decimal digits
+  of each of the three readings.
+
+  Most ISM devices REPEAT the message 2-5 times to increase the
+  possibility of correct reception (since this is a simplex
+  communication system -- no indication that the information
+  was correctly received).  This program sends just one message
+  per transmission.
+
   When asserting/deasserting voltage to the signal pin, timing
   is critical.  The strategy of this program is to have the
   "playback" -- the setting of voltages at specific times to
@@ -35,13 +48,20 @@
   voltages and delay specific length of time and executes them, with
   minimal processing overhead.
 
+  This program was modeled, somewhat, on Joan's pigpiod (Pi GPIO daemon)
+  code for waveform generation.  But because the Arduino-like devices
+  are single-process/single-core rather than multitasking OSes, the code
+  here does not need to provide for contingencies in that multi-tasking
+  environment -- it just generates the waveform description which a subsequent
+  code module uses to drive the transmitter voltages.
+
   The BME68x code for reading temp/press/hum/VOC was adapted from
   the Adafruit demo program http://www.adafruit.com/products/3660
   The BME68x temperature reading may need calibration against
   an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
   (below) can be used to perform an adjustment, if needed.
 
-  hdtodd@gmail.com, 2025.02.10
+  hdtodd@gmail.com, 2025.01.13
 */
 
 // For Pico 2
@@ -49,8 +69,9 @@
 #define ADCRES  12                     // Analog-to-digital resolution is 12 bits
 #define RES     ((float)(1 << ADCRES)) // Divisor for 12-bit ADC
 
-#define DELAY   29365 // Time between messages in ms
-// #define DELAY 4365 // Time between messages in ms
+// Delay transmissions 30 sec or 5 sec; loop takes ~600ms
+#define DELAY   29419 // Time between messages in ms
+// #define DELAY 4419 // Time between messages in ms
 
 // Couldn't find the IDE macro that says if serial port is Serial or SerialUSB
 // So try this; if it doesn't work, specify which
@@ -140,28 +161,28 @@ typedef struct {
 */
 uint8_t CRC8POLY       = 0x97;
 uint8_t CRC8Table[256] = {
-        0x00, 0x97, 0xb9, 0x2e, 0xe5, 0x72, 0x5c, 0xcb, 0x5d, 0xca, 0xe4, 0x73,
-        0xb8, 0x2f, 0x01, 0x96, 0xba, 0x2d, 0x03, 0x94, 0x5f, 0xc8, 0xe6, 0x71,
-        0xe7, 0x70, 0x5e, 0xc9, 0x02, 0x95, 0xbb, 0x2c, 0xe3, 0x74, 0x5a, 0xcd,
-        0x06, 0x91, 0xbf, 0x28, 0xbe, 0x29, 0x07, 0x90, 0x5b, 0xcc, 0xe2, 0x75,
-        0x59, 0xce, 0xe0, 0x77, 0xbc, 0x2b, 0x05, 0x92, 0x04, 0x93, 0xbd, 0x2a,
-        0xe1, 0x76, 0x58, 0xcf, 0x51, 0xc6, 0xe8, 0x7f, 0xb4, 0x23, 0x0d, 0x9a,
-        0x0c, 0x9b, 0xb5, 0x22, 0xe9, 0x7e, 0x50, 0xc7, 0xeb, 0x7c, 0x52, 0xc5,
-        0x0e, 0x99, 0xb7, 0x20, 0xb6, 0x21, 0x0f, 0x98, 0x53, 0xc4, 0xea, 0x7d,
-        0xb2, 0x25, 0x0b, 0x9c, 0x57, 0xc0, 0xee, 0x79, 0xef, 0x78, 0x56, 0xc1,
-        0x0a, 0x9d, 0xb3, 0x24, 0x08, 0x9f, 0xb1, 0x26, 0xed, 0x7a, 0x54, 0xc3,
-        0x55, 0xc2, 0xec, 0x7b, 0xb0, 0x27, 0x09, 0x9e, 0xa2, 0x35, 0x1b, 0x8c,
-        0x47, 0xd0, 0xfe, 0x69, 0xff, 0x68, 0x46, 0xd1, 0x1a, 0x8d, 0xa3, 0x34,
-        0x18, 0x8f, 0xa1, 0x36, 0xfd, 0x6a, 0x44, 0xd3, 0x45, 0xd2, 0xfc, 0x6b,
-        0xa0, 0x37, 0x19, 0x8e, 0x41, 0xd6, 0xf8, 0x6f, 0xa4, 0x33, 0x1d, 0x8a,
-        0x1c, 0x8b, 0xa5, 0x32, 0xf9, 0x6e, 0x40, 0xd7, 0xfb, 0x6c, 0x42, 0xd5,
-        0x1e, 0x89, 0xa7, 0x30, 0xa6, 0x31, 0x1f, 0x88, 0x43, 0xd4, 0xfa, 0x6d,
-        0xf3, 0x64, 0x4a, 0xdd, 0x16, 0x81, 0xaf, 0x38, 0xae, 0x39, 0x17, 0x80,
-        0x4b, 0xdc, 0xf2, 0x65, 0x49, 0xde, 0xf0, 0x67, 0xac, 0x3b, 0x15, 0x82,
-        0x14, 0x83, 0xad, 0x3a, 0xf1, 0x66, 0x48, 0xdf, 0x10, 0x87, 0xa9, 0x3e,
-        0xf5, 0x62, 0x4c, 0xdb, 0x4d, 0xda, 0xf4, 0x63, 0xa8, 0x3f, 0x11, 0x86,
-        0xaa, 0x3d, 0x13, 0x84, 0x4f, 0xd8, 0xf6, 0x61, 0xf7, 0x60, 0x4e, 0xd9,
-        0x12, 0x85, 0xab, 0x3c};
+    0x00, 0x97, 0xb9, 0x2e, 0xe5, 0x72, 0x5c, 0xcb, 0x5d, 0xca, 0xe4, 0x73,
+    0xb8, 0x2f, 0x01, 0x96, 0xba, 0x2d, 0x03, 0x94, 0x5f, 0xc8, 0xe6, 0x71,
+    0xe7, 0x70, 0x5e, 0xc9, 0x02, 0x95, 0xbb, 0x2c, 0xe3, 0x74, 0x5a, 0xcd,
+    0x06, 0x91, 0xbf, 0x28, 0xbe, 0x29, 0x07, 0x90, 0x5b, 0xcc, 0xe2, 0x75,
+    0x59, 0xce, 0xe0, 0x77, 0xbc, 0x2b, 0x05, 0x92, 0x04, 0x93, 0xbd, 0x2a,
+    0xe1, 0x76, 0x58, 0xcf, 0x51, 0xc6, 0xe8, 0x7f, 0xb4, 0x23, 0x0d, 0x9a,
+    0x0c, 0x9b, 0xb5, 0x22, 0xe9, 0x7e, 0x50, 0xc7, 0xeb, 0x7c, 0x52, 0xc5,
+    0x0e, 0x99, 0xb7, 0x20, 0xb6, 0x21, 0x0f, 0x98, 0x53, 0xc4, 0xea, 0x7d,
+    0xb2, 0x25, 0x0b, 0x9c, 0x57, 0xc0, 0xee, 0x79, 0xef, 0x78, 0x56, 0xc1,
+    0x0a, 0x9d, 0xb3, 0x24, 0x08, 0x9f, 0xb1, 0x26, 0xed, 0x7a, 0x54, 0xc3,
+    0x55, 0xc2, 0xec, 0x7b, 0xb0, 0x27, 0x09, 0x9e, 0xa2, 0x35, 0x1b, 0x8c,
+    0x47, 0xd0, 0xfe, 0x69, 0xff, 0x68, 0x46, 0xd1, 0x1a, 0x8d, 0xa3, 0x34,
+    0x18, 0x8f, 0xa1, 0x36, 0xfd, 0x6a, 0x44, 0xd3, 0x45, 0xd2, 0xfc, 0x6b,
+    0xa0, 0x37, 0x19, 0x8e, 0x41, 0xd6, 0xf8, 0x6f, 0xa4, 0x33, 0x1d, 0x8a,
+    0x1c, 0x8b, 0xa5, 0x32, 0xf9, 0x6e, 0x40, 0xd7, 0xfb, 0x6c, 0x42, 0xd5,
+    0x1e, 0x89, 0xa7, 0x30, 0xa6, 0x31, 0x1f, 0x88, 0x43, 0xd4, 0xfa, 0x6d,
+    0xf3, 0x64, 0x4a, 0xdd, 0x16, 0x81, 0xaf, 0x38, 0xae, 0x39, 0x17, 0x80,
+    0x4b, 0xdc, 0xf2, 0x65, 0x49, 0xde, 0xf0, 0x67, 0xac, 0x3b, 0x15, 0x82,
+    0x14, 0x83, 0xad, 0x3a, 0xf1, 0x66, 0x48, 0xdf, 0x10, 0x87, 0xa9, 0x3e,
+    0xf5, 0x62, 0x4c, 0xdb, 0x4d, 0xda, 0xf4, 0x63, 0xa8, 0x3f, 0x11, 0x86,
+    0xaa, 0x3d, 0x13, 0x84, 0x4f, 0xd8, 0xf6, 0x61, 0xf7, 0x60, 0x4e, 0xd9,
+    0x12, 0x85, 0xab, 0x3c};
 
 uint8_t crc8(uint8_t *msg, int lengthOfMsg, uint8_t init)
 {
@@ -227,15 +248,15 @@ class omni : public ISM_Device {
     /* clang-format off */
     int sigLen             = 6;
     SIGNAL omni_signals[6] = {
-        {SIG_SYNC,     "Sync",      576,  628},  // 600, 600
-        {SIG_SYNC_GAP, "Sync-gap",  176,  828},  // 200, 800
-        {SIG_ZERO,     "Zero",      376,  228},  // 400, 200
-        {SIG_ONE,      "One",       176,  428},  // 200, 400
-        {SIG_IM_GAP,   "IM_gap",      0,  1250},
-        {SIG_PULSE,    "Pulse",       0,    0}   // spare
+            {SIG_SYNC,     "Sync",     576,  628},  // 600, 600
+            {SIG_SYNC_GAP, "Sync-gap", 176,  828},  // 200, 800
+            {SIG_ZERO,     "Zero",     376,  228},  // 400, 200
+            {SIG_ONE,      "One",      176,  428},  // 200, 400
+            {SIG_IM_GAP,   "IM_gap",     0, 1250},
+            {SIG_PULSE,    "Pulse",      0,    0}   // spare
     };
     /* clang-format on */
-    
+
     // Instantiate the device by linking 'signals' to our device timing
     omni()
     {
@@ -246,23 +267,21 @@ class omni : public ISM_Device {
     /* clang-format off */
     /* Routines to create 80-bit omni datagrams from sensor data
        Pack <type, id, iTemp, oTemp, iHum, oHum, press, volts> into a 72-bit
-       datagram appended with a 1-byte CRC8 checksum (10 bytes total).
-       Bit fields are binary-encoded, most-significant-bit first.
+         datagram appended with a 1-byte CRC8 checksum (10 bytes total).
+         Bit fields are binary-encoded, most-significant-bit first.
 
-       Inputs:
+         Inputs:
          uint8_t  <fmt>   is a 4-bit unsigned integer datagram type identifier
          uint8_t  <id>    is a 4-bit unsigned integer sensor ID
-         uint16_t <temp>  is a 16-bit signed twos-complement integer
-                              representing 10*(temperature reading)
-         uint8_t  <hum>   is an 8-bit unsigned integer
-                              representing the relative humidity as integer
-         uint16_t <press> is a 16-bit unsigned integer
-                              representing barometric 10*pressure (in hPa)
-         uint16_t <volts> is a 16-bit unsigned integer
-                              representing 100*(voltage-3.00) volts
-         uint8_t  <msg>   is an array of at least 10 8-bit unsigned integers
+         uint16_t <temp>  is a 16-bit signed twos-complement integer representing
+       10*(temperature reading) uint8_t  <hum>   is an 8-bit unsigned integer
+       representing the relative humidity as integer uint16_t <press> is a 16-bit
+       unsigned integer representing barometric 10*pressure (in hPa) uint16_t
+       <volts> is a 16-bit unsigned integer representing 100*(voltage-2.50) volts
+         uint8_t  <msg>   is an array of at least 10 unsigned 8-bit uint8_t
+       integers
 
-       Output in "msg" as nibbles:
+         Output in "msg" as nibbles:
 
              fi 11 12 22 hh gg pp pp vv cc
 
@@ -273,10 +292,12 @@ class omni : public ISM_Device {
              h: sensor 1 humidity reading (e.g., indoor),  %RH as integer
              g: sensor 2 humidity reading (e.g., outdoor), %RH as integer
              p: barometric pressure * 10, in hPa, 0..1628.4 hPa
-             v: (VCC-3.0)*100, in volts, 3.00..5.55 volts
+             v: (VCC-2.5)*100, in volts, 2.50..5.06 volts
              c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
                     divisor polynomial 0x97, no reflections or inversions
     */
+    /* clang-format on */
+    
     void pack_msg(uint8_t fmt, uint8_t id, int16_t iTemp, int16_t oTemp,
             uint8_t iHum, uint8_t oHum, uint16_t press, uint16_t volts,
             uint8_t msg[])
@@ -357,8 +378,8 @@ Adafruit_BME680 bme; // I2C
 // Adafruit_BME680 bme(BME_CS); // hardware SPI
 // Adafruit_BME680 bme(BME_CS, BME_MOSI, BME_MISO,  BME_SCK);
 
-omni om;  // The omni object as a global
-int count    = 0; // Count the packets sent
+omni om;          // The omni object as a global
+int  count   = 0; // Count the packets sent
 bool haveBME = false;
 bool first   = true;
 
@@ -387,35 +408,31 @@ void setup(void)
 
 void loop(void)
 {
-    uint8_t msg[10] = {0}; // omni messages are 10 bytes
     uint8_t omniLen = 80;  // omni messages are 80 bits long
-    uint8_t fmt     = 1;
-    uint8_t id      = 1;
-    float itempf, otempf, ihumf, ohumf, pressf, voltsf, voc;
+    uint8_t msg[10] = {0}; // and 10 bytes long
+    uint8_t fmt, id, ihum, ohum, volts;
     int16_t itemp, otemp;
     uint16_t press;
-    uint8_t ihum, ohum, volts;
-    uint8_t y, i, ih, oh, v;
-    int16_t it, ot;
-    uint16_t p;
+    float itempf, otempf, ihumf, ohumf, pressf, voltsf, voc;
     bool gotReading = false;
+    //    uint8_t y, i, ih, oh, v;
+    //int16_t it, ot;
+    //uint16_t p;
 
     if (first) {
-      DBG_println("\nStarting omni multisensor test transmission");
+      DBG_println(F("\nStarting omni multisensor test transmission"));
       if (!haveBME) 
           DBG_println("BME not found; transmitting core temp and VCC");
     };
 
-    // Get the readings from the BME688
-    // If we can't get readings, wait and try again later
+    // Get the readings from the BME688 if we have one
     if (haveBME) 
         gotReading = bme.performReading();
     if (haveBME && !gotReading) 
         DBG_println(F("BME688 failed to perform reading :-(")); 
-
+    // If we have readings, use them
     if (gotReading) {
-        // Unpack BME readings, repack for ISM transmission, and create the waveform
-        // Use Pico 2 core temp as "outside" temp, otemp
+        // Pack readings for ISM transmission
         fmt = 1;
         itemp = (uint16_t)((bme.temperature + 0.05 + BME_TEMP_OFFSET) *
                            10); // adjust & round
@@ -440,6 +457,7 @@ void loop(void)
                 (uint8_t)(100.0 * (((float)analogRead(VSYSPin)) / RES * 3.0 * 3.3 - 3.0) +
                           0.5);
     };
+
     // Pack the message, create the waveform, and transmit
     om.pack_msg(fmt, id, itemp, otemp, ihum, ohum, press, volts, msg);
     om.make_wave(msg, omniLen);
@@ -449,6 +467,7 @@ void loop(void)
     digitalWrite(TX, LOW);
 
     // Write back on serial monitor the readings we're transmitting
+    // Validates pack/unpack formatting and reconciliation on rtl_433
     om.unpack_msg(msg, fmt, id, itemp, otemp, ihum, ohum, press, volts);
     itempf = ((float)itemp) / 10.0;
     otempf = ((float)otemp) / 10.0;

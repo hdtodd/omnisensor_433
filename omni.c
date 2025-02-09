@@ -9,58 +9,86 @@
     (at your option) any later version.
 */
 
+/* clang-format off */
 /**
 Omni multisensor protocol.
 
-The protocol is for the extensible wireless sensor 'Omni'
+The protocol is for the extensible wireless sensor 'omni'
 -  Single transmission protocol
 -  Flexible 64-bit data payload field structure
 -  Extensible to a total of 16 possible multi-sensor data formats
 
 The 'sensor' is actually a programmed microcontroller (e.g.,
-Raspberry Pi Pico 2 or similar) with multiple possible data sensor
-attachments.  A packet 'format' field indicates the type of data
-packet being sent -- that is, the data fields being transmitted.
+Raspberry Pi Pico 2 or similar) with multiple possible data-sensor
+attachments.  A packet 'format' field indicates the format of the data
+packet being sent.
 
-For each transmission, the sensor (microcontroller) sends 4 identical
-packages of a 4-pulse preamble and 80 message bits each, totaling
-336 pulses and requiring a total transmission time of ~212usec.
-The bits are PWM modulated with On Off Keying.
+The omni protocol is OOK modulated PWM with fixed period of 600 us
+for data bits, preambled by four long startbit pulses of fixed period equal
+to ~1666 us. It is similar to the Lacrosse TX141TH-BV2.
 
-The preamble for the message data is a set of 4 600us pulses + 600us
-gaps.  The preamble is immediately followed by 80 data bits.
-A long pulse of 400us followed by a short 200us gap is a 0 bit.
-A short pulse of 200us followed by a long 400us gap is a 1 bit.
+A single data packet looks as follows:
+1) preamble - 600us high followed by 600us low, repeated 4 times:
 
-The message is 10 bytes / 20 nibbles:
+     ----      ----      ----      ----
+    |    |    |    |    |    |    |    |
+          ----      ----      ----      ----
+
+2) a train of 80 data pulses with fixed 600us period follows immediately:
+
+     ---    --     --     ---    ---    --     ---
+    |   |  |  |   |  |   |   |  |   |  |  |   |   |
+         --    ---    ---     --     --    ---     -- ....
+
+A logical 0 is 400us of high followed by 200us of low.
+A logical 1 is 200us of high followed by 400us of low.
+
+Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
+
+The omni microcontroller sends 4 of identical packets of
+4-pulse preamble followed by 80 data bits in a single burst, for a
+total of 336 bits requiring ~212us.
+
+The last packet in a burst is followed by a postamble low
+of at least 1250us.
+
+These 4-packet bursts repeat every 30 seconds. 
+
+The message in each packet is 10 bytes / 20 nibbles:
 
     [fmt] [id] 16*[data] [crc8] [crc8]
 
-- fmt is a 4-bit, NON-ZERO message data format identifier
-- id is a 4-bit, NON-ZERO device identifier
-- data are 8 bytes of data payload fields, interpreted according to 'format'
-- crc8 is 1 byte of CRC8 checksum of the first 9 bytes:
-      polynomial 0x97, initial 0x00
+- fmt is a 4-bit message data format identifier
+- id is a 4-bit device identifier
+- data are 16 nibbles = 8 bytes of data payload fields,
+      interpreted according to 'fmt'
+- crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
+      polynomial 0x97, init 0x00
 
 A format=0 message simply reports the core temperature and input power
-voltage of the microcontroller.  For format=0 messages, the message
+voltage of the microcontroller and is the format used if no data
+sensor is present.  For format=0 messages, the message
 nibbles are to be read as:
+
      fi tt t0 00 00 00 00 00 vv cc
 
      f: format of datagram, 0-15
      i: id of device, 0-15
-     1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
+     t: Pico 2 core temperature: °C *10, 12-bit, 2's complement integer
      0: bytes should be 0
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
      c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
             divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
-It is an indoor-outdoor temperature/humidity/pressure sensor with fields:
-indoor temp, outdoor temp, indoor humidity, outdoor humidity,
-barometric pressure, sensor power VCC.  The data fields are binary
-values, 2's complement for temperatures.  For format=1 messages, the
-message nibbles are to be read as:
+It uses the Bosch BME688 environmental sensor as a data source.
+It is an indoor-outdoor temperature/humidity/pressure sensor, and the
+message packet has the following fields:
+    indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+    barometric pressure, sensor power VCC.
+The data fields are binary values, 2's complement for temperatures.
+For format=1 messages, the message nibbles are to be read as:
+
      fi 11 12 22 hh gg pp pp vv cc
 
      f: format of datagram, 0-15
@@ -74,6 +102,8 @@ message nibbles are to be read as:
      c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
             divisor polynomial 0x97, no reflections or inversions
 */
+/* clang-format on */
+
 #include "decoder.h"
 
 #define OMNI_MSGFMT_00 0x00
@@ -82,6 +112,17 @@ message nibbles are to be read as:
 static int omni_decode(r_device *, bitbuffer_t *);
 
 // List the output fields for various message types
+static char const *const output_fields_00[] = {
+        "model",
+        "fmt",
+        "id",
+	"temperature_C",
+	"voltage_V",
+        "payload",
+        "mic",
+        NULL,
+};
+
 static char const *const output_fields_01[] = {
         "model",
         "fmt",
@@ -96,18 +137,7 @@ static char const *const output_fields_01[] = {
         NULL,
 };
 
-static char const *const output_fields_00[] = {
-        "model",
-        "fmt",
-        "id",
-	"temperature_C",
-	"voltage_V",
-        "payload",
-        "mic",
-        NULL,
-};
-
-// [hdt] remove <const> omni =
+/* clang-format off */
 r_device omni = {
         .name        = "Omni multisensor",
         .modulation  = OOK_PULSE_PWM,
@@ -119,6 +149,7 @@ r_device omni = {
         .decode_fn   = &omni_decode,
         .fields      = output_fields_00,
 };
+/* clang-format on */
 
 static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
 {

@@ -122,6 +122,11 @@ You may receive data from the sensor as BCD (binary-coded decimal).  And if the 
 
 ### Using Your Transmitted Data -- Simple Approach
 
+The simplest approach to using the data transmitted from your microcontroller-sensor(s) on another computer would be to decode that data on the other computer.  The `fmt=0` messages in `omni` nominally represent a 3-nibble temperature, 2-nibble voltage, and 11 nibbles of 0's (unused).  But the `omni` decoder, as distributed, reports the full 8-byte data string in hexadecimal.  So, in fact, the simplest approach is to record your data fields in the full 8 bytes of a `fmt=0` packet on the microcontroller, allow `rtl_433` to receive and, via MQTT, publish the packet as its full hexadecimal string, which allows any other computer on that network to subscribe to the MQTT feed, look for `omni` protocol messages of `fmt=0` type, and decode the hexadecimal string using the decoder that you wrote for prototyping.
+
+This approach would allow you to use any other computer on the network, using any language from which you can subscribe to MQTT publications, to decode and process the transmittd data.  This simple approach avoids the need to test and implement the `omni.c` decoder for `rtl_433`, and then update it in the case of future releases of `omni.c` conflicting with your customizations.
+
+
 ### Writing Your Own `rtl_433` Decoder -- No-So-Simple Approach
 
 

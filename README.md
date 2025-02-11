@@ -104,11 +104,11 @@ where
 ```
 11.  If necessary, calculate by hand to confirm that the message that would be transmitted contains the data you intended to transmit.  
 12.  Transfer that code to the Arduino `.ino` code:
-    *  Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
-    *  Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
-    *  In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
-    *  In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
-13.  Compile and download your `omni.ino` code into your microcontroller (Pico).  Watch the monitor window. The Pico should be sending messages at 5-second or 30-second intervals (select the appropriate `#define` in `omni.ino`), and the monitor window will show both the data values being transmitted, as received from your sensor(s), and as a string of 8 hexadecimal data bytes represent the data being sent by ISM-band transmission.
+     *  Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
+     *  Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
+     *  In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
+     *  In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
+14.  Compile and download your `omni.ino` code into your microcontroller (Pico).  Watch the monitor window. The Pico should be sending messages at 5-second or 30-second intervals (select the appropriate `#define` in `omni.ino`), and the monitor window will show both the data values being transmitted, as received from your sensor(s), and as a string of 8 hexadecimal data bytes represent the data being sent by ISM-band transmission.
 
 At this point, you are transmitting real data from your sensors to `rtl_433`!!
 
@@ -118,7 +118,7 @@ Before going further, you might want to review how you've encoded your data to s
 
 If the 8 bytes seems too few to carry the data you want to send, look for ways to minimze the number of bits needed for each data field.  Consider using offsetting and scaling to minimize the size of the data field.  For example, to represent voltages up to 5V5 with a precision of 0.01 volt, you might expect to need to represent 5500 distinct values, which would require a 13-bit data field.  But if you can reasonably expect voltages to always be between 3V3 and 5V0, then offsetting by 3.0 and mulitiplying by 100.0, the value would be between 000 and 250, which can be represented by an 8-bit field. You can use the value 255 to represent an under- or over-voltage reading.
 
-You may receive data from the sensor as BCD (binary-coded decimal).  And if the 8-byte data payload is not a constraint, it might be best to simply encode the BCD in the message packet that way rather than manipulate the data in the microcontroller to reformat it.  But if the payload size is a constraint, consider converting the BCD to an unsigned int representation or to a 2's complement field.  
+You may receive data from the sensor as BCD (binary-coded decimal).  And if the 8-byte data payload is not a constraint, it might be best to simply encode the BCD in the message packet that way rather than manipulate the data in the microcontroller to reformat it.  But if the payload size is a constraint, consider converting the BCD to an unsigned int representation or to a signed 2's complement field.  
 
 ### Using Your Transmitted Data -- Simple Approach
 

@@ -34,8 +34,8 @@ Congratulations!  At this point, you have successfully implemented a remote sens
 
 If you have a Bosch BME68x sensor, the `omni.ino` code is prepared to report its readings.  Simply connect the BME68x into your Pioc 2 and restart or reload the Pico 2.  As programmed, `omni` uses the I2C interface to the BME68x:
 
-*  connect BME SCL to Pico
-*  connect BME S
+*  connect BME SDI to Pico pin 6, SDA (may not work on other Pico SDA pins!)
+*  connect BME SCK to Pico pin 7, SCL (may not work on other Pico SCL pins!)
 *  connect BME GND to Pico GND
 *  connect BME VCC to Pico VSYS
 

@@ -34,7 +34,7 @@ Congratulations!  At this point, you have successfully implemented a remote sens
 
 If you have a Bosch BME68x sensor, the `omni.ino` code is prepared to report its readings.  As programmed, `omni` uses the I2C interface to the BME68x, but SPI is a compile-time option.  
 
-For I2C, if you have a Pico with a Qwiic connector, it's easiest to use that to connect your Pico to your BME68x -- just one cable and connector.  Simply connect the BME68x into your Pioc 2 and restart or reload the Pico 2.  
+For I2C, if you have a Pico with a Qwiic/STEMMA connector, it's easiest to use that to connect your Pico to your BME68x -- just one cable and connector.  Simply connect the BME68x into your Pioc 2 and restart or reload the Pico 2.  
 
 Otherwise, you'll need to make these connections from your BME68x to the Pico:
 

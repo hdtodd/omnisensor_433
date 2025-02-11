@@ -32,14 +32,20 @@ Congratulations!  At this point, you have successfully implemented a remote sens
 
 ## Adding Sensor Data
 
-If you have a Bosch BME68x sensor, the `omni.ino` code is prepared to report its readings.  As programmed, `omni` uses the I2C interface to the BME68x.  If you have a Pico with a Qwiic connector, it's easiest to use that to connect your Pico to your BME68x -- just one cable and connector.  Simply connect the BME68x into your Pioc 2 and restart or reload the Pico 2.  Otherwise, you'll need to make these connections from your BME68x to the Pico:
+If you have a Bosch BME68x sensor, the `omni.ino` code is prepared to report its readings.  As programmed, `omni` uses the I2C interface to the BME68x, but SPI is a compile-time option.  
+
+For I2C, if you have a Pico with a Qwiic connector, it's easiest to use that to connect your Pico to your BME68x -- just one cable and connector.  Simply connect the BME68x into your Pioc 2 and restart or reload the Pico 2.  
+
+Otherwise, you'll need to make these connections from your BME68x to the Pico:
 
 *  connect BME SDI to Pico pin 6, SDA (appears not work on other Pico SDA pins!)
 *  connect BME SCK to Pico pin 7, SCL (appears not work on other Pico SCL pins!)
 *  connect BME GND to Pico GND
 *  connect BME VCC to Pico VSYS
 
-and restart.  `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
+and restart.  
+
+Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
 
 `{"time":"2025-02-05 16:13:16","protocol":275,"model":"Omni","fmt":1,"id":1,"temperature_C":22.7,"temperature_2_C":22.0,"humidity":13.0,"humidity_2":49.0,"pressure_hPa":1008.4,"voltage_V":4.83,"mic":"CRC","mod":"ASK","freq":433.92509,"rssi":-0.221214,"snr":14.9035,"noise":-15.1247}`
 

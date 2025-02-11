@@ -93,7 +93,7 @@ Since the starting point for either approach is to encode your data on the micro
     *  *Don't change the signal timing.*
     *  In `main()`, change the code to use the names of the data fields your sensor(s) are supplying and provide reasonable values for those sensor readings (be sure to include negative values if those are possible sensor readings);  change the invocation of `om` pack/unpack procedures to use your sensor data field names.
 9.  Compile and run your prototype C++ program (you may need `-std=c++11` as a C++ compiler option).
-10.  You should see a detailed report on the data values you've encoded, the encoded message, the values as they've been decoded, the hexadecimal representation of the full 10-byte message, and the signal pulse/gap timings that `omni` will generate through the transmitter. Verify that the reported values match what you intended to send. If necessary, calculate by hand to confirm that the message that would be transmitted contains the data you intended to transmit.  The message format, in nibbles, is:
+10.  You should see a detailed report on the data values you've encoded, the encoded message, the values as they've been decoded, the hexadecimal representation of the full 10-byte message, and the signal pulse/gap timings that `omni` will generate through the transmitter. Verify that the reported values match what you intended to send. The message format, in nibbles, is:
 ```
      fi dd dd dd dd dd dd dd dd cc
 where
@@ -102,12 +102,13 @@ where
       d are your encoded data bytes; and
       c is the computed CRC8 checksum.
 ```
-11.  Transfer that code to the Arduino `.ino` code:
-   * Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
-   * Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
-   * In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
-   * In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
-12.  Compile and download your `omni.ino` code into your microcontroller (Pico).  Watch the monitor window. The Pico should be sending messages at 5-second or 30-second intervals (select the appropriate `#define` in `omni.ino`), and the monitor window will show both the data values being transmitted, as received from your sensor(s), and as a string of 8 hexadecimal data bytes represent the data being sent by ISM-band transmission.
+11.  If necessary, calculate by hand to confirm that the message that would be transmitted contains the data you intended to transmit.  
+12.  Transfer that code to the Arduino `.ino` code:
+    *  Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
+    *  Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
+    *  In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
+    *  In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
+13.  Compile and download your `omni.ino` code into your microcontroller (Pico).  Watch the monitor window. The Pico should be sending messages at 5-second or 30-second intervals (select the appropriate `#define` in `omni.ino`), and the monitor window will show both the data values being transmitted, as received from your sensor(s), and as a string of 8 hexadecimal data bytes represent the data being sent by ISM-band transmission.
 
 At this point, you are transmitting real data from your sensors to `rtl_433`!!
 

@@ -103,10 +103,10 @@ where
       c is the computed CRC8 checksum.
 ```
 11.  Transfer that code to the Arduino `.ino` code:
-    *  Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
-    *  Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
-    *  In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
-    *  In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
+   * Copy your object code into `omni.ino` in place of the `class omni` object defined there but keep the `omni` name for the class.
+   * Change any `cout` statements in your object `class` to corresponding `DBG_print()` statements in the `.ino` file.
+   * In the `setup()` section, change any initiation you need to set up your sensor system or sensor library.
+   * In the `loop()` section, add the names of the data values being retrieved from your sensor, use `fmt=0` as the message format type, change the `om.pack_msg()` and `om.unpack_msg()` parameters to use your data fields.
 12.  Compile and download your `omni.ino` code into your microcontroller (Pico).  Watch the monitor window. The Pico should be sending messages at 5-second or 30-second intervals (select the appropriate `#define` in `omni.ino`), and the monitor window will show both the data values being transmitted, as received from your sensor(s), and as a string of 8 hexadecimal data bytes represent the data being sent by ISM-band transmission.
 
 At this point, you are transmitting real data from your sensors to `rtl_433`!!

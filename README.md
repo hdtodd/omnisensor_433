@@ -49,7 +49,7 @@ Once restarted, `omni` will print readings on the Arduino IDE monitor window, an
 
 `{"time":"2025-02-05 16:13:16","protocol":275,"model":"Omni","fmt":1,"id":1,"temperature_C":22.7,"temperature_2_C":22.0,"humidity":13.0,"humidity_2":49.0,"pressure_hPa":1008.4,"voltage_V":4.83,"mic":"CRC","mod":"ASK","freq":433.92509,"rssi":-0.221214,"snr":14.9035,"noise":-15.1247}`
 
-If you prefer to use SPI to connect the Pico 2 to the BME68x, you'll need to edit the `omni.ino` code before the `setup()` section to select SPI rather than I2C.
+If you prefer to use SPI to connect the Pico 2 to the BME68x, you'll need to edit the `omni.ino` code before the `setup()` section to select SPI rather than I2C and wire the Pico to the BME68x using the SPI pins.
 
 ## Adding Your Own Sensor System
 

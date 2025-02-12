@@ -139,7 +139,7 @@ In `loop()` in your `omni.ino` microcontroller code, after `if (gotReading)`, se
 Now, back in `omni.c`, you need to make the following additions:
 
 1.  After the other, similar `#define` statements, add your `#define OMNI_MSGFMT_nn nn` to the list, with "nn" the format number you've chosen.
-2,  Following the model of similar array definitions for other `output_fields` formats, add `static char const *const output_fields_nn[] = {`, where nn is your format number, and list the data fields there in the same way they're listed for `output_fields_01`, for example.  You might just copy the list from `output_fields_01` and replace the fields named "temperature_C" through "voltage_V" with the fields your microcontroller is transmitting.  
+2.  Following the model of similar array definitions for other `output_fields` formats, add `static char const *const output_fields_nn[] = {}`, where nn is your format number, and list the data fields there in the same way they're listed for `output_fields_01`, for example.  You might just copy the list from `output_fields_01` and replace the fields named "temperature_C" through "voltage_V" with the fields your microcontroller is transmitting.  Use one of the common data field names if appropriate: https://github.com/merbanan/rtl_433/blob/master/docs/DATA_FORMAT.md .
 3.  In the code for function `static int omni_decode()`:
     *  In the segment of code for `switch (message_fmt)`, insert a new `case OMNI_MSGFMT_nn:`, where nn is your format number.
     *  As the first line in that `case`, insert `omni.fields = output_fields_nn;`.

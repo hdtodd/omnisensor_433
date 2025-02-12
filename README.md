@@ -130,16 +130,16 @@ This approach would allow you to use any other computer on the network, using an
 
 You may want to write your own `rtl_433` decoder so that `rtl_433` reports the values of all your fields in its JSON format, for example, as it appears in the "Adding Sensor Data" section.  If you've written the decoder for `omni.ino`, you've done the hard part already.  But now you'll need to incorporate that decoder into the `rtl_433` infrastructure, and that's a bit more complicated.
 
-First, review the process for building the `rtl_433` executable ( https://github.com/merbanan/rtl_433/blob/master/docs/BUILDING.md ).
+First, review the process for building the `rtl_433` executable ( https://github.com/merbanan/rtl_433/blob/master/docs/BUILDING.md ).  You might also find it helpful to review the "Adding a New Decoder" section here: https://github.com/merbanan/rtl_433/blob/master/docs/CONTRIBUTING.md .
 
-Now, examine the file `./src/devices/omni.c` in the directory of your `rtl_433` git clone.  That's the file you'll be modifying to create your own data format.  Find the definitions that look like `OMNI_MSGFMT_nn`.  That's the list of formats that have already been defined and for which there are decoders in `omni.c`.  Starting at nn=15 and working backward, pick the next available number.  For example, if there are no decoders other than `OMNI_MSGFMT_00` and `OMNI_MSGFMT_01`, you'd use `OMNI_MSGFMT_15`.  Now would be a good time to make a backup copy of that original `omni.c` file, since you'll be editing this one.
+Now, examine the file `./src/devices/omni.c` in the directory of your `rtl_433` git clone.  That's the file you'll be modifying to create your own data format.  It has all the timings defined as needed to act as decoder from the `omni.ino` microcontroller code. Find the definitions that look like `OMNI_MSGFMT_nn`.  That's the list of message formats that have already been defined and for which there are already decoders in `omni.c`.  Starting at nn=15 and working backward, pick the next available number.  For example, if there are no decoders other than `OMNI_MSGFMT_00` and `OMNI_MSGFMT_01`, you'd use `OMNI_MSGFMT_15`.  Now would be a good time to make a backup copy of that original `omni.c` file, since you'll be editing this one.
 
 In `loop()` in your `omni.ino` microcontroller code, after `if (gotReading)`, set `fmt=nn`, where `nn` is your chosen format number.  Compile and download your `.ino` file to the microcontroller.  If you monitor `rtl_433`'s output, you should now see records for your device `omni` with your format number, a temperature and voltage reading (which will likely be meaningless), and the hexadecimal string representing the data sent by your microcontroller (confirm that they match).
 
 Now, back in `omni.c`, you need to make the following additions:
 
-1.  With the other, similar `#define` statements, add your `#define OMNI_MSGFMT_nn nn` to the list.
-2,  Following the other, similar array definitions, add `static char const *const output_fields_nn[] = {`, where nn is your format number, and list the data fields there in the same way they're listed for `output_fields_01`, for example.  You might just copy the list from `output_fields_01` and replace the fields named "temperature_C" through "voltage_V" with the fields your microcontroller is transmitting.  
+1.  After the other, similar `#define` statements, add your `#define OMNI_MSGFMT_nn nn` to the list, with "nn" the format number you've chosen.
+2.  Following the model of similar array definitions for other `output_fields` formats, add `static char const *const output_fields_nn[] = {}`, where nn is your format number, and list the data fields there in the same way they're listed for `output_fields_01`, for example.  You might just copy the list from `output_fields_01` and replace the fields named "temperature_C" through "voltage_V" with the fields your microcontroller is transmitting.  Use one of the common data field names if appropriate: https://github.com/merbanan/rtl_433/blob/master/docs/DATA_FORMAT.md .
 3.  In the code for function `static int omni_decode()`:
     *  In the segment of code for `switch (message_fmt)`, insert a new `case OMNI_MSGFMT_nn:`, where nn is your format number.
     *  As the first line in that `case`, insert `omni.fields = output_fields_nn;`.
@@ -160,23 +160,24 @@ The omni signaling protocol is OOK PWM (on-off keying with pulse-width modulatio
 A single data packet looks as follows:
 
 1) preamble - 600μs high followed by 600μs low, repeated 4 times:
-
+```
      ----      ----      ----      ----
     |    |    |    |    |    |    |    |
           ----      ----      ----      ----
-
+```
 2) a train of 80 data pulses with fixed 600μs period follows immediately:
-
+```
      ---    --     --     ---    ---    --     ---
     |   |  |  |   |  |   |   |  |   |  |  |   |   |
          --    ---    ---     --     --    ---     -- ....
-
+```
 A logical 0 is 400μs of high followed by 200μs of low.
+
 A logical 1 is 200μs of high followed by 400μs of low.
 
 Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
 
-The omni microcontroller sends 4 identical packets of 4-pulse preamble followed by 80 data bits in a single burst, for a
+The omni microcontroller sends 4 identical packets of (4-pulse preamble followed by 80 data bits) in a single burst, for a
 total of 336 bits requiring ~212μs.
 
 The last packet in a burst is followed by a postamble low of at least 1250μs.

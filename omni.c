@@ -137,6 +137,8 @@ static char const *const output_fields_01[] = {
         NULL,
 };
 
+/* New format output_field_nn declaration goes here */
+
 /* clang-format off */
 r_device omni = {
         .name        = "Omni multisensor",

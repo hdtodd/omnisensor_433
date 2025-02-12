@@ -71,7 +71,7 @@
 
 // Delay transmissions 30 sec or 5 sec; loop takes ~600ms
 #define DELAY   29419 // Time between messages in ms
-// #define DELAY 4419 // Time between messages in ms
+//#define DELAY 4419 // Time between messages in ms
 
 // Couldn't find the IDE macro that says if serial port is Serial or SerialUSB
 // So try this; if it doesn't work, specify which
@@ -248,10 +248,10 @@ class omni : public ISM_Device {
     /* clang-format off */
     int sigLen             = 6;
     SIGNAL omni_signals[6] = {
-            {SIG_SYNC,     "Sync",     576,  628},  // 600, 600
-            {SIG_SYNC_GAP, "Sync-gap", 176,  828},  // 200, 800
-            {SIG_ZERO,     "Zero",     376,  228},  // 400, 200
-            {SIG_ONE,      "One",      176,  428},  // 200, 400
+            {SIG_SYNC,     "Sync",     600,  600},  // 600, 600
+            {SIG_SYNC_GAP, "Sync-gap", 200,  800},  // 200, 800
+            {SIG_ZERO,     "Zero",     400,  200},  // 400, 200
+            {SIG_ONE,      "One",      200,  400},  // 200, 400
             {SIG_IM_GAP,   "IM_gap",     0, 1250},
             {SIG_PULSE,    "Pulse",      0,    0}   // spare
     };
@@ -410,14 +410,11 @@ void loop(void)
 {
     uint8_t omniLen = 80;  // omni messages are 80 bits long
     uint8_t msg[10] = {0}; // and 10 bytes long
-    uint8_t fmt, id, ihum, ohum, volts;
+    uint8_t fmt, id=9, ihum, ohum, volts;
     int16_t itemp, otemp;
     uint16_t press;
     float itempf, otempf, ihumf, ohumf, pressf, voltsf, voc;
     bool gotReading = false;
-    //    uint8_t y, i, ih, oh, v;
-    //int16_t it, ot;
-    //uint16_t p;
 
     if (first) {
       DBG_println(F("\nStarting omni multisensor test transmission"));
@@ -438,7 +435,7 @@ void loop(void)
                            10); // adjust & round
         otemp = (uint16_t)((analogReadTemp() + 0.05) * 10.0);
         ihum  = (uint16_t)((bme.humidity + 0.5) * 10.0); // round
-        ohum  = 0;
+        ohum  = 50;
         press = (uint16_t)(bme.pressure / 10.0);         // hPa * 10
         voc   = (uint16_t)(bme.gas_resistance / 1000.0); // KOhms
         volts =

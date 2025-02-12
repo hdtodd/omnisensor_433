@@ -126,15 +126,116 @@ The simplest approach to using the data transmitted from your microcontroller-se
 
 This approach would allow you to use any other computer on the network, using any language from which you can subscribe to MQTT publications, to decode and process the transmittd data.  This simple approach avoids the need to test and implement the `omni.c` decoder for `rtl_433`, and then update it in the case of future releases of `omni.c` conflicting with your customizations.
 
-
 ### Writing Your Own `rtl_433` Decoder -- No-So-Simple Approach
+
+You may want to write your own `rtl_433` decoder so that `rtl_433` reports the values of all your fields in its JSON format, for example, as it appears in the "Adding Sensor Data" section.  If you've written the decoder for `omni.ino`, you've done the hard part already.  But now you'll need to incorporate that decoder into the `rtl_433` infrastructure, and that's a bit more complicated.
+
+First, review the process for building the `rtl_433` executable ( https://github.com/merbanan/rtl_433/blob/master/docs/BUILDING.md ).
+
+Now, examine the file `./src/devices/omni.c` in the directory of your `rtl_433` git clone.  That's the file you'll be modifying to create your own data format.  Find the definitions that look like `OMNI_MSGFMT_nn`.  That's the list of formats that have already been defined and for which there are decoders in `omni.c`.  Starting at nn=15 and working backward, pick the next available number.  For example, if there are no decoders other than `OMNI_MSGFMT_00` and `OMNI_MSGFMT_01`, you'd use `OMNI_MSGFMT_15`.  Now would be a good time to make a backup copy of that original `omni.c` file, since you'll be editing this one.
+
+In `loop()` in your `omni.ino` microcontroller code, after `if (gotReading)`, set `fmt=nn`, where `nn` is your chosen format number.  Compile and download your `.ino` file to the microcontroller.  If you monitor `rtl_433`'s output, you should now see records for your device `omni` with your format number, a temperature and voltage reading (which will likely be meaningless), and the hexadecimal string representing the data sent by your microcontroller (confirm that they match).
+
+Now, back in `omni.c`, you need to make the following additions:
+
+1.  With the other, similar `#define` statements, add your `#define OMNI_MSGFMT_nn nn` to the list.
+2,  Following the other, similar array definitions, add `static char const *const output_fields_nn[] = {`, where nn is your format number, and list the data fields there in the same way they're listed for `output_fields_01`, for example.  You might just copy the list from `output_fields_01` and replace the fields named "temperature_C" through "voltage_V" with the fields your microcontroller is transmitting.  
+3.  In the code for function `static int omni_decode()`:
+    *  In the segment of code for `switch (message_fmt)`, insert a new `case OMNI_MSGFMT_nn:`, where nn is your format number.
+    *  As the first line in that `case`, insert `omni.fields = output_fields_nn;`.
+    *  Insert your decoding statements, copied from the prototype or from your `omni.ino` code.  Be sure to instantiate the variables for the various fields you're decoding.  For real numbers, use `double` rather than `float` (`rtl_433` doesn't have a `DATA_FLOAT` descriptor for fields).
+    *  Invoke `data_make()` to list the JSON labels `rtl_433` will report, the format for displaying your data fields, and the names of the fields into which you decoded your data.  You can simply copy the list from `case OMNI_MSGFMT_01` and replace lines `temperature_C` through `voltage_V` with your list of descriptors and fields, editing the formatting descriptors as necessary.
+    *  Don't forget to end your `case` section with a `break;`.
+4.  `cd` to your `rtl_433` directory and rebuild `rtl_433` (`cmake ...`).
+5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 275 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
+6.  Edit your `omni.c` file if the data values reported by `rtl_433` don't match those your on the Arduino IDE monitor window for your microcontroller.
+7.  When the values reported by `rtl_433` match those sent by your microcontroller, install your new `rtl_433` for production and restart with your standard configuration file.
+
+You now have a microcontroller-based sensor system that is fully recognized by `rtl_433`, and you can integrate those sensor readings with your other monitoring systems.
+
+## The `omni` Protocol
+
+The omni signaling protocol is OOK PWM (on-off keying with pulse-width modulation). It uses fixed period of 600μsec for data bits: "0" is a 400μs pulse followed by a 200μs gap; a "1" is a 200μs pulse followed by a 400μs gap.  The data portion of a message is preambled by four long 600μsec pulses + 600μsec gaps.  This signaling protocol is similar to the Lacrosse TX141TH-BV2.
+
+A single data packet looks as follows:
+
+1) preamble - 600μs high followed by 600μs low, repeated 4 times:
+
+     ----      ----      ----      ----
+    |    |    |    |    |    |    |    |
+          ----      ----      ----      ----
+
+2) a train of 80 data pulses with fixed 600μs period follows immediately:
+
+     ---    --     --     ---    ---    --     ---
+    |   |  |  |   |  |   |   |  |   |  |  |   |   |
+         --    ---    ---     --     --    ---     -- ....
+
+A logical 0 is 400μs of high followed by 200μs of low.
+A logical 1 is 200μs of high followed by 400μs of low.
+
+Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
+
+The omni microcontroller sends 4 identical packets of 4-pulse preamble followed by 80 data bits in a single burst, for a
+total of 336 bits requiring ~212μs.
+
+The last packet in a burst is followed by a postamble low of at least 1250μs.
+
+These 4-packet bursts repeat every 30 seconds. 
+
+The message in each packet is 10 bytes / 20 nibbles:
+
+    [fmt] [id] 16*[data] [crc8] [crc8]
+
+- fmt is a 4-bit message data format identifier
+- id is a 4-bit device identifier
+- data are 16 nibbles = 8 bytes of data payload fields,
+      interpreted according to 'fmt'
+- crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
+      polynomial 0x97, init 0x00
+
+A format=0 message simply reports the core temperature and input power voltage of the microcontroller and is the format used if no data sensor is present.  For format=0 messages, the message nibbles are to be read as:
+
+     fi tt t0 00 00 00 00 00 vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     t: Pico 2 core temperature: °C *10, 12-bit, 2's complement integer
+     0: bytes should be 0 if format is really fmt=0; otherwise, undefined
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+            divisor polynomial 0x97, no reflections or inversions
+
+A format=1 message format is provided as a more complete example.  It uses the Bosch BME68x environmental sensor as a data source.
+It is an indoor-outdoor temperature/humidity/pressure sensor, and the message packet has the following fields:
+    indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+    barometric pressure, sensor power VCC.
+The data fields are binary values, 2's complement for temperatures.
+For format=1 messages, the message nibbles are to be read as:
+
+     fi 11 12 22 hh gg pp pp vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
+     2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
+     h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
+     g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
+     p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+            divisor polynomial 0x97, no reflections or inversions
 
 
 ## How It Works
 
+When `rtl_433` sees a signaling pattern that matches the pattern defined in `r_device omni` in the `omni.c` code, it invokes the `omni_decode()` function in the `omni.c` file.  That function determines if there are 2 matching patterns of 80 bits in the 320-bit data bit stream.  If so, the decoder presumes that it has a valid `omni` message.  It further validates the 80-bit message by confirming that the CRC byte computed from the prior 9 bytes matches the transmitted CRC byte.
+
+If the message passes those validation tests, the message format number is extracted from the message packet, and the decoder for that format is selected in the `switch` statement to decode the fields and prepare the description for `rtl_433` to publish.
+
 ## `rtl_433` Monitoring Tools
 
-## The `omni` Protocol
+
 
 ## Release History
 

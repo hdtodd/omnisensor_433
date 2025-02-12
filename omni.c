@@ -186,6 +186,12 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
     // Decode that format, if we know it
     switch (message_fmt) {
 
+    /*  Default to fmt=00 so message data are reported in hex
+    default:
+        decoder_log(decoder, 1, __func__, "Unknown message type");
+        return DECODE_FAIL_SANITY;
+    */
+    default:
     case OMNI_MSGFMT_00:
         omni.fields = output_fields_00;
         char hexstring[50];
@@ -234,9 +240,9 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
 	    NULL);
         /* clang-format on */
         break;
-    default:
-        decoder_log(decoder, 1, __func__, "Unknown message type");
-        return DECODE_FAIL_SANITY;
+
+	/* New decoders follow here */
+	
     };
 
     // And output the field values

@@ -160,23 +160,24 @@ The omni signaling protocol is OOK PWM (on-off keying with pulse-width modulatio
 A single data packet looks as follows:
 
 1) preamble - 600μs high followed by 600μs low, repeated 4 times:
-
+```
      ----      ----      ----      ----
     |    |    |    |    |    |    |    |
           ----      ----      ----      ----
-
+```
 2) a train of 80 data pulses with fixed 600μs period follows immediately:
-
+```
      ---    --     --     ---    ---    --     ---
     |   |  |  |   |  |   |   |  |   |  |  |   |   |
          --    ---    ---     --     --    ---     -- ....
-
+```
 A logical 0 is 400μs of high followed by 200μs of low.
+
 A logical 1 is 200μs of high followed by 400μs of low.
 
 Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
 
-The omni microcontroller sends 4 identical packets of 4-pulse preamble followed by 80 data bits in a single burst, for a
+The omni microcontroller sends 4 identical packets of (4-pulse preamble followed by 80 data bits) in a single burst, for a
 total of 336 bits requiring ~212μs.
 
 The last packet in a burst is followed by a postamble low of at least 1250μs.

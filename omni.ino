@@ -15,10 +15,12 @@
 
 /* clang-format off */
 /**
-Omni multisensor protocol.
+Omni multisensor protocol for ISM-band remote sensing
 
-The protocol is for the extensible wireless sensor 'omni'
--  Single transmission protocol
+This code defines the ISM-band transmission signaling and
+the message data-formatting protocol for the extensible
+wireless sensor 'omni':
+-  Single transmission signaling protocol
 -  Flexible 64-bit data payload field structure
 -  Extensible to a total of 16 possible multi-sensor data formats
 

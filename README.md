@@ -28,7 +28,7 @@ Then follow these steps:
 9.  Start your *new* `rtl_433` with `rtl_433 -R <omni protocol number> -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
 10.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file: the only change will be that it now reports packets it receives from an `omni` device with a format that matches those that it knows about.
 
-Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, its VCC (VSYS) USB voltage in volts, and the hexadecimal string that represents the full 10 data bytes of your transmitted message.
+Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, its VCC (VSYS) USB voltage in volts, and the hexadecimal string that represents the full 8 *data* bytes of your transmitted message.
 
 ## Adding Sensor Data
 

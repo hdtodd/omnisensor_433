@@ -46,11 +46,16 @@ Otherwise, you'll need to make these connections from your BME68x to the Pico:
 and restart.  
 
 Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
+```
+{"time":"2025-02-13 11:39:49","protocol":275,"model":"omni","id":9,
+"channel":1,"temperature_C":23.4,"temperature_2_C":22.5,"humidity":7.0,
+"humidity_2":50.0,"pressure_hPa":988.2,"voltage_V":4.83,"mic":"CRC",
+"mod":"ASK","freq":433.92557,"rssi":-0.215767,"snr":14.81568,
+"noise":-15.0315}
+```
 
-`
-{"time":"2025-02-13 11:39:49","protocol":275,"model":"omni","id":9,"channel":1,"temperature_C":23.4,"temperature_2_C":22.5,"humidity":7.0,"humidity_2":50.0,"pressure_hPa":988.2,"voltage_V":4.83,"mic":"CRC","mod":"ASK","freq":433.92557,"rssi":-0.215767,"snr":14.81568,"noise":-15.0315}
-`
-NOTE: The message format variable, *fmt* in `omni.ino`, is reported as the value of *channel* in `rtl_433`'s output, in keeping with the `rtl_433` standard for field precedence:  model \> id \> channel.  "fmt" or "format" is not one of the standard `rtl_433` labels but "channel" is.
+> [!NOTE]
+> The message format variable, *fmt* in `omni.ino`, is reported as the value of *channel* in `rtl_433`'s output, in keeping with the `rtl_433` standard for field precedence:  model \> id \> channel.  "fmt" or "format" is not one of the standard `rtl_433` labels but "channel" is.
 
 If you prefer to use SPI to connect the Pico 2 to the BME68x, you'll need to edit the `omni.ino` code before the `setup()` section to select SPI rather than I2C and wire the Pico to the BME68x using the SPI pins.
 

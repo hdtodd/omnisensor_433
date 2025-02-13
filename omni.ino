@@ -1,68 +1,144 @@
 /* -*- mode: c++ ; indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 
-  omni.ino
+    omni.ino
 
-  This program uses a 433MHz transmitter and Arduino (or similar device
-  supported on the Arduino IDE) to send temperature/humidity
-  readings in a format compatible with the Acurite 609TXC protocol.
-  See the src/device/lacrosse_ws7000.c file in the rtl_433 distribution
-  (https://github.com/merbanan/rtl_433) for details about the packet
-  format.  The data packet format created here matches the format
-  recognized by rtl_433 for the Lacrosse WS7000-20.
+/** @file
+    Omni multi-sensor protocol.
 
-  This program executes on the Arduino Uno R3 but is constrained by the
-  limited 2K memory limit for variables.  Take care in modifying the
-  program as changes in memory requirements may cause execution errors.
+    Copyright (C) 2025 H. David Todd <hdtodd@gmail.com>
 
-  The Lacrosse WS7000-20 remote sensor transmits temperature,
-  humidity, and barometric pressure readings. A transmission frame
-  is 81 bits long (for the -20 model).  A "0" bit is 800us high
-  followed by 400us low and a "1" bit is 400us high followed
-  by 800us low.
-
-  The frame begins with 10 "0" bits followed by 1 "1" bit.
-  The data follow that preamble as 14 4-bit nibbles, separated
-  from each other by a "1" bit, and each nibble has the
-  least-significant bit first.  Soo the data values must have
-  their bit patterns reversed as they're inserted into the frame.
-  The data are BCD-encoded values representing the decimal digits
-  of each of the three readings.
-
-  Most ISM devices REPEAT the message 2-5 times to increase the
-  possibility of correct reception (since this is a simplex
-  communication system -- no indication that the information
-  was correctly received).  This program sends just one message
-  per transmission.
-
-  When asserting/deasserting voltage to the signal pin, timing
-  is critical.  The strategy of this program is to have the
-  "playback" -- the setting of voltages at specific times to
-  convey information -- be as simple as possible to minimize
-  computer processing delays in the signal-setting timings.
-  So the program generates a "waveform" as a series of commands
-  to assert/deassert voltages and to delay the specified times
-  to communicate information.  Those commands are entered into
-  an array to represent the waveform.
-
-  The playback, then, just retrieves the commands to assert/deassert
-  voltages and delay specific length of time and executes them, with
-  minimal processing overhead.
-
-  This program was modeled, somewhat, on Joan's pigpiod (Pi GPIO daemon)
-  code for waveform generation.  But because the Arduino-like devices
-  are single-process/single-core rather than multitasking OSes, the code
-  here does not need to provide for contingencies in that multi-tasking
-  environment -- it just generates the waveform description which a subsequent
-  code module uses to drive the transmitter voltages.
-
-  The BME68x code for reading temp/press/hum/VOC was adapted from
-  the Adafruit demo program http://www.adafruit.com/products/3660
-  The BME68x temperature reading may need calibration against
-  an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
-  (below) can be used to perform an adjustment, if needed.
-
-  hdtodd@gmail.com, 2025.01.13
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 */
+
+/* clang-format off */
+/**
+Omni multisensor protocol.
+
+The protocol is for the extensible wireless sensor 'omni'
+-  Single transmission protocol
+-  Flexible 64-bit data payload field structure
+-  Extensible to a total of 16 possible multi-sensor data formats
+
+The 'sensor' is actually a programmed microcontroller (e.g.,
+Raspberry Pi Pico 2 or similar) with multiple possible data-sensor
+attachments.  A packet 'format' field indicates the format of the data
+packet being sent.
+
+NOTE: the rtl_433 decoder, omni.c, reports the packet format, "fmt" in the
+code here, as "channel", in keeping with the standard nomenclature for
+rtl_433 data fields.  "Format" is a better descriptor for the manner in
+which the field is used here, but "channel" is a better, standard label.
+
+The omni protocol is OOK modulated PWM with fixed period of 600μs
+for data bits, preambled by four long startbit pulses of fixed period equal
+to 1200μs. It is similar to the Lacrosse TX141TH-BV2.
+
+A single data packet looks as follows:
+1) preamble - 600μs high followed by 600μs low, repeated 4 times:
+
+     ----      ----      ----      ----
+    |    |    |    |    |    |    |    |
+          ----      ----      ----      ----
+
+2) a train of 80 data pulses with fixed 600μs period follows immediately:
+
+     ---    --     --     ---    ---    --     ---
+    |   |  |  |   |  |   |   |  |   |  |  |   |   |
+         --    ---    ---     --     --    ---     -- ....
+
+A logical 0 is 400μs of high followed by 200μs of low.
+A logical 1 is 200μs of high followed by 400μs of low.
+
+Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
+
+The omni microcontroller sends 4 of identical packets of
+4-pulse preamble followed by 80 data bits in a single burst, for a
+total of 336 bits requiring ~212μs.
+
+The last packet in a burst is followed by a postamble low
+of at least 1250μs.
+
+These 4-packet bursts repeat every 30 seconds. 
+
+The message in each packet is 10 bytes / 20 nibbles:
+
+    [fmt] [id] 16*[data] [crc8] [crc8]
+
+- fmt is a 4-bit message data format identifier
+- id is a 4-bit device identifier
+- data are 16 nibbles = 8 bytes of data payload fields,
+      interpreted according to 'fmt'
+- crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
+      polynomial 0x97, init 0x00
+
+A format=0 message simply transmits the core temperature and input power
+voltage of the microcontroller and is the format used if no data
+sensor is present.  For format=0 messages, the message
+nibbles are to be read as:
+
+     fi tt t0 00 00 00 00 00 vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     t: Pico 2 core temperature: °C *10, 12-bit, 2's complement integer
+     0: bytes should be 0
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+        divisor polynomial 0x97, no reflections or inversions
+
+A format=1 message format is provided as a more complete example.
+It uses the Bosch BME688 environmental sensor as a data source.
+It is an indoor-outdoor temperature/humidity/pressure sensor, and the
+message packet has the following fields:
+    indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+    barometric pressure, sensor power VCC.
+The data fields are binary values, 2's complement for temperatures.
+For format=1 messages, the message nibbles are to be read as:
+
+     fi 11 12 22 hh gg pp pp vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
+     2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
+     h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
+     g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
+     p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+            divisor polynomial 0x97, no reflections or inversions
+
+When asserting/deasserting voltage to the signal pin, timing
+is critical.  The strategy of this program is to have the
+"playback" -- the setting of voltages at specific times to
+convey information -- be as simple as possible to minimize
+computer processing delays in the signal-setting timings.
+So the program generates a "waveform" as a series of commands
+to assert/deassert voltages and to delay the specified times
+to communicate information.  Those commands are entered into
+an array to represent the waveform.
+
+The playback, then, just retrieves the commands to assert/deassert
+voltages and delay specific length of time and executes them, with
+minimal processing overhead.
+
+This program was modeled, somewhat, on Joan's pigpiod (Pi GPIO daemon)
+code for waveform generation.  But because the Arduino-like devices
+are single-process/single-core rather than multitasking OSes, the code
+here does not need to provide for contingencies in that multi-tasking
+environment -- it just generates the waveform description which a subsequent
+code module uses to drive the transmitter voltages.
+
+The BME68x code for reading temp/press/hum/VOC was adapted from
+the Adafruit demo program http://www.adafruit.com/products/3660
+The BME68x temperature reading may need calibration against
+an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
+(below) can be used to perform an adjustment, if needed.
+*/
+/* clang-format on */
 
 // For Pico 2
 #define VSYSPin 29                     // VSYS is on pin 29 on Pico 2 (may conflict with WiFi!)
@@ -105,8 +181,8 @@
 #define TX  3           // transmit data line connected to Pico 2 GPIO 3
 #define LED LED_BUILTIN // LED active on GPIO 25 when transmitting
 #else
-#define TX  4  // transmit data line connected to SAMD21 GPIO 4
-#define LED 13 // LED active on GPIO 13 when transmitting
+#define TX  4           // transmit data line connected to SAMD21 GPIO 4
+#define LED 13          // LED active on GPIO 13 when transmitting
 #endif
 
 #define REPEATS 4 // Number of times to repeat packet in one transmission
@@ -266,7 +342,7 @@ class omni : public ISM_Device {
 
     /* clang-format off */
     /* Routines to create 80-bit omni datagrams from sensor data
-       Pack <type, id, iTemp, oTemp, iHum, oHum, press, volts> into a 72-bit
+       Pack <fmt, id, iTemp, oTemp, iHum, oHum, press, volts> into a 72-bit
          datagram appended with a 1-byte CRC8 checksum (10 bytes total).
          Bit fields are binary-encoded, most-significant-bit first.
 
@@ -274,12 +350,15 @@ class omni : public ISM_Device {
          uint8_t  <fmt>   is a 4-bit unsigned integer datagram type identifier
          uint8_t  <id>    is a 4-bit unsigned integer sensor ID
          uint16_t <temp>  is a 16-bit signed twos-complement integer representing
-       10*(temperature reading) uint8_t  <hum>   is an 8-bit unsigned integer
-       representing the relative humidity as integer uint16_t <press> is a 16-bit
-       unsigned integer representing barometric 10*pressure (in hPa) uint16_t
-       <volts> is a 16-bit unsigned integer representing 100*(voltage-2.50) volts
-         uint8_t  <msg>   is an array of at least 10 unsigned 8-bit uint8_t
-       integers
+                          10*(temperature reading)
+         uint8_t  <hum>   is an 8-bit unsigned integer
+                          representing the relative humidity as integer
+         uint16_t <press> is a 16-bit unsigned integer representing
+                          10*(barometric pressure) (in hPa)
+         uint16_t <volts> is a 16-bit unsigned integer
+                          representing 100*(voltage-3.00) volts
+         uint8_t  <msg>   is an array of at least 10 unsigned 8-bit
+                          uint8_t integers
 
          Output in "msg" as nibbles:
 
@@ -291,8 +370,8 @@ class omni : public ISM_Device {
              2: sensor 2 temp reading (e.g, outdoor), °C *10, 2's complement
              h: sensor 1 humidity reading (e.g., indoor),  %RH as integer
              g: sensor 2 humidity reading (e.g., outdoor), %RH as integer
-             p: barometric pressure * 10, in hPa, 0..1628.4 hPa
-             v: (VCC-2.5)*100, in volts, 2.50..5.06 volts
+             p: barometric pressure * 10, in hPa, 0..65535 hPa*10
+             v: (VCC-3.00)*100, in volts,  000...255 volts*100
              c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
                     divisor polynomial 0x97, no reflections or inversions
     */

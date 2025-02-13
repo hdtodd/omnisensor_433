@@ -23,34 +23,39 @@ Raspberry Pi Pico 2 or similar) with multiple possible data-sensor
 attachments.  A packet 'format' field indicates the format of the data
 packet being sent.
 
-The omni protocol is OOK modulated PWM with fixed period of 600 us
+NOTE: the rtl_433 decoder, omni.c, reports the packet format, "fmt" in the
+code here, as "channel", in keeping with the standard nomenclature for
+rtl_433 data fields.  "Format" is a better descriptor for the manner in
+which the field is used here.
+
+The omni protocol is OOK modulated PWM with fixed period of 600μs
 for data bits, preambled by four long startbit pulses of fixed period equal
-to ~1666 us. It is similar to the Lacrosse TX141TH-BV2.
+to 1200μs. It is similar to the Lacrosse TX141TH-BV2.
 
 A single data packet looks as follows:
-1) preamble - 600us high followed by 600us low, repeated 4 times:
+1) preamble - 600μs high followed by 600μs low, repeated 4 times:
 
      ----      ----      ----      ----
     |    |    |    |    |    |    |    |
           ----      ----      ----      ----
 
-2) a train of 80 data pulses with fixed 600us period follows immediately:
+2) a train of 80 data pulses with fixed 600μs period follows immediately:
 
      ---    --     --     ---    ---    --     ---
     |   |  |  |   |  |   |   |  |   |  |  |   |   |
          --    ---    ---     --     --    ---     -- ....
 
-A logical 0 is 400us of high followed by 200us of low.
-A logical 1 is 200us of high followed by 400us of low.
+A logical 0 is 400μs of high followed by 200μs of low.
+A logical 1 is 200μs of high followed by 400μs of low.
 
 Thus, in the example pictured above the bits are 0 1 1 0 0 1 0 ...
 
 The omni microcontroller sends 4 of identical packets of
 4-pulse preamble followed by 80 data bits in a single burst, for a
-total of 336 bits requiring ~212us.
+total of 336 bits requiring ~212μs.
 
 The last packet in a burst is followed by a postamble low
-of at least 1250us.
+of at least 1250μs.
 
 These 4-packet bursts repeat every 30 seconds. 
 
@@ -65,7 +70,7 @@ The message in each packet is 10 bytes / 20 nibbles:
 - crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
       polynomial 0x97, init 0x00
 
-A format=0 message simply reports the core temperature and input power
+A format=0 message simply transmits the core temperature and input power
 voltage of the microcontroller and is the format used if no data
 sensor is present.  For format=0 messages, the message
 nibbles are to be read as:
@@ -78,7 +83,7 @@ nibbles are to be read as:
      0: bytes should be 0
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
      c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
-            divisor polynomial 0x97, no reflections or inversions
+        divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
 It uses the Bosch BME688 environmental sensor as a data source.

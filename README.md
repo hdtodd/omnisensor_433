@@ -47,13 +47,16 @@ and restart.
 
 Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
 
-`{"time":"2025-02-05 16:13:16","protocol":275,"model":"Omni","fmt":1,"id":1,"temperature_C":22.7,"temperature_2_C":22.0,"humidity":13.0,"humidity_2":49.0,"pressure_hPa":1008.4,"voltage_V":4.83,"mic":"CRC","mod":"ASK","freq":433.92509,"rssi":-0.221214,"snr":14.9035,"noise":-15.1247}`
+`
+{"time":"2025-02-13 11:39:49","protocol":275,"model":"omni","id":9,"channel":1,"temperature_C":23.4,"temperature_2_C":22.5,"humidity":7.0,"humidity_2":50.0,"pressure_hPa":988.2,"voltage_V":4.83,"mic":"CRC","mod":"ASK","freq":433.92557,"rssi":-0.215767,"snr":14.81568,"noise":-15.0315}
+`
+NOTE: The message format variable, *fmt* in `omni.ino`, is reported as the value of *channel* in `rtl_433`'s output, in keeping with the `rtl_433` standard for field precedence:  model \> id \> channel.  "fmt" or "format" is not one of the standard `rtl_433` labels but "channel" is.
 
 If you prefer to use SPI to connect the Pico 2 to the BME68x, you'll need to edit the `omni.ino` code before the `setup()` section to select SPI rather than I2C and wire the Pico to the BME68x using the SPI pins.
 
 ## Adding Your Own Sensor System
 
-Omnisensor\_433 is a development foundation that supports implementation of a variety of sensor types within a fixed signaling protocol.  The signaling protocol (pulse and gap timing) is fixed: the `.ino` microcontroller code transmits a pattern that the `rtl_433` program recognizes and passes on to the decoder module, `omni.c`.  Within that framework, the microcontroller can be programmed to deliver 8-data-byte packets in up to 16 different formats.  And, of course, data from multiple sensor types can be combined into a single type of data packet.
+Omnisensor\_433 is a development foundation that supports implementation of a variety of sensor types within a fixed signaling protocol.  The signaling protocol (pulse and gap timing) is fixed: the `.ino` microcontroller code transmits a pattern that the `rtl_433` program recognizes and passes on to the decoder module, `omni.c`.  Within that framework, the microcontroller can be programmed to deliver 8-data-byte packets in up to 16 different formats.  And, of course, data from multiple sensor types can be combined into a single type of data packet, and longer readings from a single sensor could be transmitted via multiple packets with different formats.
 
 As distributed, `omnisensor_433` provides two formats for data:
 *  `fmt=0` has a temperature and a voltage field; other fields are 0.

@@ -1,6 +1,6 @@
 /* -*- mode: c++ ; indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 
-  omni.ino
+  omni.ino, v1.0
 
   This program uses a 433MHz transmitter and Arduino (or similar device
   supported on the Arduino IDE) to send temperature/humidity

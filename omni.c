@@ -23,10 +23,12 @@ Raspberry Pi Pico 2 or similar) with multiple possible data-sensor
 attachments.  A packet 'format' field indicates the format of the data
 packet being sent.
 
-NOTE: the rtl_433 decoder, omni.c, reports the packet format, "fmt" in the
-code here, as "channel", in keeping with the standard nomenclature for
-rtl_433 data fields.  "Format" is a better descriptor for the manner in
-which the field is used here.
+NOTE: the rtl_433 decoder, omni.c, uses the "fmt" or "Format" field 
+here, as transmitted by omni.c, to decode the incoming message.  
+But, through omni.c, rtl_433 reports the packet format-field value
+as "channel" in its published reporting (JSON, for example), 
+in keeping with the standard nomenclature and order of field-name
+precedence used within rtl_433 for data fields.  
 
 The omni protocol is OOK modulated PWM with fixed period of 600μs
 for data bits, preambled by four long startbit pulses of fixed period equal
@@ -211,9 +213,9 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
         // Make the data descriptor
         /* clang-format off */
 	data = data_make(
-	    "model",           "",                                               DATA_STRING, "Omni_00",
-	    "fmt",             "Format",                                         DATA_INT,     message_fmt,
+	    "model",           "",                                               DATA_STRING, "omni",
 	    "id",              "Id",                                             DATA_INT,     id,
+	    "channel",         "Format",                                         DATA_INT,     message_fmt,
 	    "temperature_C"  , "Core Temperature",   DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  itemp_c, 
 	    "voltage_V",       "VCC voltage",        DATA_FORMAT, "%.2f V",      DATA_DOUBLE,  volts,
             "payload",         "Payload",                                        DATA_STRING,  hexstring,
@@ -234,9 +236,9 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
         // Make the data descriptor
         /* clang-format off */
 	data = data_make(
-	    "model",           "",                                               DATA_STRING, "Omni_01",
-	    "fmt",             "Format",                                         DATA_INT,     message_fmt,
+	    "model",           "",                                               DATA_STRING, "omni",
 	    "id",              "Id",                                             DATA_INT,     id,
+	    "channel",         "Format",                                         DATA_INT,     message_fmt,
 	    "temperature_C"  , "Indoor Temperature", DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  itemp_c, 
 	    "temperature_2_C", "Outdoor Temperature",DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  otemp_c, 
 	    "humidity",        "Indoor Humidity",    DATA_FORMAT, "%.0f %%",     DATA_DOUBLE,  ihum,

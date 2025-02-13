@@ -237,10 +237,6 @@ When `rtl_433` sees a signaling pattern that matches the pattern defined in `r_d
 
 If the message passes those validation tests, the message format number is extracted from the message packet, and the decoder for that format is selected in the `switch` statement to decode the fields and prepare the description for `rtl_433` to publish.
 
-## `rtl_433` Monitoring Tools
-
-
-
 ## Release History
 
 *  V1.0: First operational version, 2025.02.10

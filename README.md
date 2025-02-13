@@ -28,7 +28,7 @@ Then follow these steps:
 9.  Start your *new* `rtl_433` with `rtl_433 -R <omni protocol number> -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
 10.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file: the only change will be that it now reports packets it receives from an `omni` device with a format that matches those that it knows about.
 
-Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, and its VCC (VSYS) USB voltage in volts.
+Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, its VCC (VSYS) USB voltage in volts, and the hexadecimal string that represents the full 10 data bytes of your transmitted message.
 
 ## Adding Sensor Data
 
@@ -156,7 +156,7 @@ Now, back in `omni.c`, you need to make the following additions:
     *  Don't forget to end your `case` section with a `break;`.
 4.  `cd` to your `rtl_433` directory and rebuild `rtl_433` (`cmake ...`).
 5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 275 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
-6.  Edit your `omni.c` file if the data values reported by `rtl_433` don't match those your on the Arduino IDE monitor window for your microcontroller.
+6.  Edit to correct the decoding statements in your `omni.c` file if the data values reported by `rtl_433` don't match those your on the Arduino IDE monitor window for your microcontroller (double-check by decoding the the hexadecimal string manually if necessary).
 7.  When the values reported by `rtl_433` match those sent by your microcontroller, install your new `rtl_433` for production and restart with your standard configuration file.
 
 You now have a microcontroller-based sensor system that is fully recognized by `rtl_433`, and you can integrate those sensor readings with your other monitoring systems.

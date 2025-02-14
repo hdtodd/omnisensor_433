@@ -45,6 +45,11 @@ Otherwise, you'll need to make these connections from your BME68x to the Pico:
 
 and restart.  
 
+![omnisensor_433_bb](https://github.com/user-attachments/assets/6dc71061-b651-4389-88a5-c9cdbcbbfb3f)
+
+![omnisensor_433](https://github.com/user-attachments/assets/d570a892-b142-4571-ac42-df618cf74a7f)
+
+
 Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
 ```
 {"time":"2025-02-13 11:39:49","protocol":275,"model":"omni","id":9,

@@ -243,7 +243,7 @@ For format=1 messages, the message nibbles are to be read as:
 
 ## How It Works
 
-When `rtl_433` sees a signaling pattern that matches the pattern defined in `r_device omni` in the `omni.c` code, it invokes the `omni_decode()` function in the `omni.c` file.  That function determines if there are 2 matching patterns of 80 bits in the 320-bit data bit stream.  If so, the decoder presumes that it has a valid `omni` message.  It further validates the 80-bit message by confirming that the CRC byte computed from the prior 9 bytes matches the transmitted CRC byte.
+When `rtl_433` sees a signaling pattern that matches the pattern defined in `r_device omni` in the `omni.c` code, it invokes the `omni_decode()` function in the `omni.c` file.  That function determines if there are at least 2 matching patterns of 80 bits in the 4-pattern, 320-bit data bit stream.  If so, the decoder presumes that it has a valid `omni` message.  It further validates the 80-bit message by confirming that the CRC byte computed from the prior 9 bytes matches the transmitted CRC byte.
 
 If the message passes those validation tests, the message format number is extracted from the message packet, and the decoder for that format is selected in the `switch` statement to decode the fields and prepare the description for `rtl_433` to publish.
 

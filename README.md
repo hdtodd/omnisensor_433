@@ -139,7 +139,7 @@ The simplest approach to using the data transmitted from your microcontroller-se
 
 This approach would allow you to use any other computer on the network, using any language from which you can subscribe to MQTT publications, to decode and process the transmittd data.  This simple approach avoids the need to test and implement the `omni.c` decoder for `rtl_433`, and then update it in the case of future releases of `omni.c` conflicting with your customizations.
 
-### Writing Your Own `rtl_433` Decoder -- No-So-Simple Approach
+### Writing Your Own `rtl_433` Decoder -- Not-So-Simple Approach
 
 You may want to write your own `rtl_433` decoder so that `rtl_433` reports the values of all your fields in its JSON format, for example, as it appears in the "Adding Sensor Data" section.  If you've written the decoder for `omni.ino`, you've done the hard part already.  But now you'll need to incorporate that decoder into the `rtl_433` infrastructure, and that's a bit more complicated.
 

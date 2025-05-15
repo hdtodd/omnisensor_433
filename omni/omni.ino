@@ -1,6 +1,6 @@
 /* -*- mode: c++ ; indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 
-    omni.ino v1.1
+    omni.ino v1.2
 
 /** @file
     Omni multi-sensor protocol.
@@ -92,22 +92,33 @@ nibbles are to be read as:
         divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
-It uses the Bosch BME688 environmental sensor as a data source.
-It is an indoor-outdoor temperature/humidity/pressure sensor, and the
-message packet has the following fields:
-    indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+The fields align with those defined by the Arudino-based
+weather probe, [WP_433](http://github.com/hdtodd/WP_433) and are
+recognized by the 'omni' device driver for rtl_433.
+
+This program uses the Bosch BME688 environmental sensor as a 
+data source for temperature_C/humidity/pressure readings, the
+microcontroller temperature for temperature2_C, and the
+microcontroller's power VCC as the voltage reading.  In the
+absence of a light sensor such as the OSIP Light-01 sensor,
+, it uses 50% as the light intensity value.  Substitute
+your own sensor library procedure calls to accommodate
+other sensor types.
+
+The message packet has the following fields:
+    indoor temp, outdoor temp, indoor humidity, light intensity,
     barometric pressure, sensor power VCC.
 The data fields are binary values, 2's complement for temperatures.
 For format=1 messages, the message nibbles are to be read as:
 
-     fi 11 12 22 hh gg pp pp vv cc
+     fi 11 12 22 hh ll pp pp vv cc
 
      f: format of datagram, 0-15
      i: id of device, 0-15
      1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
      2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
      h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
-     g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
+     l: light intensity % as 8-bit integer
      p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
      c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
@@ -146,6 +157,8 @@ an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
 #define VSYSPin 29                     // VSYS is on pin 29 on Pico 2 (may conflict with WiFi!)
 #define ADCRES  12                     // Analog-to-digital resolution is 12 bits
 #define RES     ((float)(1 << ADCRES)) // Divisor for 12-bit ADC
+
+#define initCRC 0xaa  // initial remainder for CRC-8 algorithm
 
 // Delay transmissions 30 sec or 5 sec; loop takes ~600ms
 #define DELAY 29419 // Time between messages in ms
@@ -331,7 +344,7 @@ class omni : public ISM_Device {
     int sigLen             = 6;
     SIGNAL omni_signals[6] = {
             {SIG_SYNC,     "Sync",     600,  600},  // 600, 600
-            {SIG_SYNC_GAP, "Sync-gap", 200,  800},  // 200, 800
+            {SIG_SYNC_GAP, "Sync-gap",   0,    0},
             {SIG_ZERO,     "Zero",     400,  200},  // 400, 200
             {SIG_ONE,      "One",      200,  400},  // 200, 400
             {SIG_IM_GAP,   "IM_gap",     0, 1250},
@@ -348,7 +361,7 @@ class omni : public ISM_Device {
 
     /* clang-format off */
     /* Routines to create 80-bit omni datagrams from sensor data
-       Pack <fmt, id, iTemp, oTemp, iHum, oHum, press, volts> into a 72-bit
+       Pack <fmt, id, iTemp, oTemp, iHum, light, press, volts> into a 72-bit
          datagram appended with a 1-byte CRC8 checksum (10 bytes total).
          Bit fields are binary-encoded, most-significant-bit first.
 
@@ -359,6 +372,8 @@ class omni : public ISM_Device {
                           10*(temperature reading)
          uint8_t  <hum>   is an 8-bit unsigned integer
                           representing the relative humidity as integer
+         uint8_t  <light> is an 8-bit unsigned integer
+                          representing the relative intensity as integer %
          uint16_t <press> is a 16-bit unsigned integer representing
                           10*(barometric pressure) (in hPa)
          uint16_t <volts> is a 16-bit unsigned integer
@@ -368,14 +383,14 @@ class omni : public ISM_Device {
 
          Output in "msg" as nibbles:
 
-             fi 11 12 22 hh gg pp pp vv cc
+             fi 11 12 22 hh ll pp pp vv cc
 
              f: format of datagram, 0-15
              i: id of device, 0-15
              1: sensor 1 temp reading (e.g, indoor),  °C *10, 2's complement
              2: sensor 2 temp reading (e.g, outdoor), °C *10, 2's complement
              h: sensor 1 humidity reading (e.g., indoor),  %RH as integer
-             g: sensor 2 humidity reading (e.g., outdoor), %RH as integer
+             l: Light-01 light intensity % as 8-bit integer
              p: barometric pressure * 10, in hPa, 0..65535 hPa*10
              v: (VCC-3.00)*100, in volts,  000...255 volts*100
              c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
@@ -384,7 +399,7 @@ class omni : public ISM_Device {
     /* clang-format on */
 
     void pack_msg(uint8_t fmt, uint8_t id, int16_t iTemp, int16_t oTemp,
-            uint8_t iHum, uint8_t oHum, uint16_t press, uint16_t volts,
+            uint8_t iHum, uint8_t light, uint16_t press, uint16_t volts,
             uint8_t msg[])
     {
         msg[0] = (fmt & 0x0f) << 4 | (id & 0x0f);
@@ -392,20 +407,20 @@ class omni : public ISM_Device {
         msg[2] = ((iTemp << 4) & 0xf0) | ((oTemp >> 8) & 0x0f);
         msg[3] = oTemp & 0xff;
         msg[4] = iHum & 0xff;
-        msg[5] = oHum & 0xff;
+        msg[5] = light & 0xff;
         msg[6] = (press >> 8) & 0xff;
         msg[7] = press & 0xff;
         msg[8] = volts & 0xff;
-        msg[9] = crc8(msg, 9, 0xaa);
+        msg[9] = crc8(msg, 9, initCRC);
         return;
     };
 
     // Unpack message into data values it represents
     void unpack_msg(uint8_t msg[], uint8_t &fmt, uint8_t &id, int16_t &iTemp,
-            int16_t &oTemp, uint8_t &iHum, uint8_t &oHum, uint16_t &press,
+            int16_t &oTemp, uint8_t &iHum, uint8_t &light, uint16_t &press,
             uint8_t &volts)
     {
-        if (msg[9] != crc8(msg, 9, 0xaa)) {
+        if (msg[9] != crc8(msg, 9, initCRC)) {
             DBG_println(
                     F("Attempt unpack of invalid message packet: CRC8 checksum error"));
             fmt   = 0;
@@ -413,7 +428,7 @@ class omni : public ISM_Device {
             iTemp = 0;
             oTemp = 0;
             iHum  = 0;
-            oHum  = 0;
+            light = 0;
             press = 0;
             volts = 0;
         }
@@ -425,7 +440,7 @@ class omni : public ISM_Device {
                     ((int16_t)((((uint16_t)msg[2]) << 12) | ((uint16_t)msg[3]) << 4)) >>
                     4;
             iHum  = msg[4];
-            oHum  = msg[5];
+            light = msg[5];
             press = ((uint16_t)(msg[6] << 8)) | msg[7];
             volts = msg[8];
         };
@@ -488,6 +503,9 @@ void setup(void)
         bme.setPressureOversampling(BME680_OS_4X);
         bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
         bme.setGasHeater(320, 150); // 320*C for 150 ms
+    }
+    else {
+        DBG_println(F("[?WP] BME688 is NOT connected!"));
     };
 }; // End setup()
 
@@ -495,10 +513,10 @@ void loop(void)
 {
     uint8_t omniLen = 80;  // omni messages are 80 bits long
     uint8_t msg[10] = {0}; // and 10 bytes long
-    uint8_t fmt, id = 9, ihum, ohum, volts;
+    uint8_t fmt, id = 9, ihum, light, volts;
     int16_t itemp, otemp;
     uint16_t press;
-    float itempf, otempf, ihumf, ohumf, pressf, voltsf, voc;
+    float itempf, otempf, ihumf, lightf, pressf, voltsf, voc;
     bool gotReading = false;
 
     if (first) {
@@ -519,8 +537,8 @@ void loop(void)
         itemp = (uint16_t)((bme.temperature + 0.05 + BME_TEMP_OFFSET) *
                            10); // adjust & round
         otemp = (uint16_t)((analogReadTemp() + 0.05) * 10.0);
-        ihum  = (uint16_t)((bme.humidity + 0.5) * 10.0); // round
-        ohum  = 50;
+        ihum  = (uint16_t)(bme.humidity + 0.5); // round
+        light = 50;  //No Light-01 sensor on this setup
         press = (uint16_t)(bme.pressure / 10.0);         // hPa * 10
         voc   = (uint16_t)(bme.gas_resistance / 1000.0); // KOhms
         volts =
@@ -533,7 +551,7 @@ void loop(void)
         itemp = (uint16_t)((analogReadTemp() + 0.05) * 10.0);
         otemp = 0;
         ihum  = 0;
-        ohum  = 0;
+        light = 0;
         press = 0;
         voc   = 0;
         volts =
@@ -542,7 +560,7 @@ void loop(void)
     };
 
     // Pack the message, create the waveform, and transmit
-    om.pack_msg(fmt, id, itemp, otemp, ihum, ohum, press, volts, msg);
+    om.pack_msg(fmt, id, itemp, otemp, ihum, light, press, volts, msg);
     om.make_wave(msg, omniLen);
     digitalWrite(LED, HIGH);
     om.playback();
@@ -551,11 +569,11 @@ void loop(void)
 
     // Write back on serial monitor the readings we're transmitting
     // Validates pack/unpack formatting and reconciliation on rtl_433
-    om.unpack_msg(msg, fmt, id, itemp, otemp, ihum, ohum, press, volts);
+    om.unpack_msg(msg, fmt, id, itemp, otemp, ihum, light, press, volts);
     itempf = ((float)itemp) / 10.0;
     otempf = ((float)otemp) / 10.0;
     ihumf  = ((float)ihum);
-    ohumf  = ((float)ohum);
+    lightf = ((float)light);
     pressf = ((float)press);
     voltsf = ((float)volts) / 100.0 + 3.00;
     DBG_print(F("Transmit msg "));
@@ -569,8 +587,8 @@ void loop(void)
     DBG_print(F(", iHum="));
     DBG_print(ihumf);
     DBG_print(F("%"));
-    DBG_print(F(", oHum="));
-    DBG_print(ohumf);
+    DBG_print(F(", light="));
+    DBG_print(lightf);
     DBG_print(F("%"));
     DBG_print(F(", Press="));
     DBG_print(pressf / 10.0);

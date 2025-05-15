@@ -1,4 +1,4 @@
-# omnisensor_433 v1.1
+# omnisensor_433 v1.2
 ## A Multi-Sensor System Based on `rtl_433`
 
 Omnisensor\_433 supports transmission of data from multiple sensors and types of sensors to an rtl\_433 receiving system from a single microcontroller using a single, flexible `rtl_433` message transmission protocol.
@@ -52,11 +52,10 @@ and restart.
 
 Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
 ```
-{"time":"2025-02-13 11:39:49","protocol":275,"model":"omni","id":9,
-"channel":1,"temperature_C":23.4,"temperature_2_C":22.5,"humidity":7.0,
-"humidity_2":50.0,"pressure_hPa":988.2,"voltage_V":4.83,"mic":"CRC",
-"mod":"ASK","freq":433.92557,"rssi":-0.215767,"snr":14.81568,
-"noise":-15.0315}
+{"time":"2025-05-15 17:14:21","protocol":277,"model":"Omni","id":9,
+"channel":1,"temperature_C":24.7,"temperature_2_C":23.9,"humidity":46.0,
+"Light %":50.0,"pressure_hPa":993.0,"voltage_V":4.84,"mic":"CRC",
+"mod":"ASK","freq":433.93389,"rssi":-0.217957,"snr":25.32009,"noise":-25.538}
 ```
 
 > [!NOTE]
@@ -70,11 +69,11 @@ Omnisensor\_433 is a development foundation that supports implementation of a va
 
 As distributed, `omnisensor_433` provides two formats for data:
 *  `fmt=0` has a temperature and a voltage field; other fields are 0.
-*  `fmt=1` has two temperature, two humidity, one barometric pressure, and one voltage field.
+*  `fmt=1` has two temperature, one humidity, one light, one barometric pressure, and one voltage field.
 
 The `omni.c` decoder for `rtl_433`, as distributed, recognizes both formats.  It reports the various values in the message for `fmt=1` messages.  But for `fmt=0` it reports the temperature and voltage *and the full 8-byte data message in hexadecimal format*.
 
-If you want to transmit data from your own sensor or group of sensors -- something other than two temperatures, two humidities, one barometric pressure -- you'll need to write your own encoding and decoding procedures.  There are several approaches you might take, some more complicated than others, and this section provides guidance on how to get started.
+If you want to transmit data from your own sensor or group of sensors -- something other than two temperatures, one humidity, one light, one barometric pressure -- you'll need to write your own encoding and decoding procedures.  There are several approaches you might take, some more complicated than others, and this section provides guidance on how to get started.
 
 But in any case, you'll need to work on encoding and decoding your sensor data.  To facilitate that, you might want to use the ISM_Emulator prototype code, which you can run on any computer with a C++ compiler.  That emulator system allows you to develop and debug the encoding/decoding software on a single computer, without a microcontroller or transmitter or even `rtl_433` receiver.  The ISM_Emulator distribution includes operational code for microcontrollers (Arduino Uno, Sparkfun SAMD21, and Raspberry Pico 2) to emulate transmission protocols for Acurite 509, Lacrosse TH141, and Lacrosse WS7000 remote temperature humidity sensors -- all recognized by `rtl_433`.  But it also includes C++ code that was used to protoype those protocols as well as the `omni` protocol used here.
 
@@ -222,19 +221,19 @@ A format=0 message simply reports the core temperature and input power voltage o
 
 A format=1 message format is provided as a more complete example.  It uses the Bosch BME68x environmental sensor as a data source.
 It is an indoor-outdoor temperature/humidity/pressure sensor, and the message packet has the following fields:
-indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+indoor temp, outdoor temp, indoor humidity, light intensity %,
 barometric pressure, sensor power VCC.
 The data fields are binary values, 2's complement for temperatures.
 For format=1 messages, the message nibbles are to be read as:
 
-fi 11 12 22 hh gg pp pp vv cc
+fi 11 12 22 hh ll pp pp vv cc
 
 f: format of datagram, 0-15
 i: id of device, 0-15
 1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
 2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
 h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
-g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
+l: light intensity reading as 8-bit integer %
 p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
 v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
 c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
@@ -251,6 +250,7 @@ If the message passes those validation tests, the message format number is extra
 
 | Version | Changes |
 |---------|---------|
+| V1.2    | 2025.05.15 Changed "humidity_2" (variable oHum) to "light" to align with the `rtl_433` "omni.c" driver definitions and the Arduino weather probe [WP_433](http://github.com/hdtodd/WP_433); updated comments |
 | V1.1    | 2025.05.14 Changed CRC-8 'init' from 0x00 to 0xaa, following a recommendation by Christian Zuckschwerdt, reviewing Williams' recommendation not to use 0x00 as 'init', and modeling reliability of error detection in the event of block error insertions [ISMErrDetect](https://github.com/hdtodd/ISMErrDetect).|
 | V1.0    | 2025.02.10 First operational version. |
 

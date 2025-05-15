@@ -1,6 +1,6 @@
 /* -*- mode: c++ ; indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 
-    omni.ino
+    omni.ino v1.1
 
 /** @file
     Omni multi-sensor protocol.
@@ -74,7 +74,7 @@ The message in each packet is 10 bytes / 20 nibbles:
 - data are 16 nibbles = 8 bytes of data payload fields,
       interpreted according to 'fmt'
 - crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
-      polynomial 0x97, init 0x00
+      polynomial 0x97, init 0xaa
 
 A format=0 message simply transmits the core temperature and input power
 voltage of the microcontroller and is the format used if no data
@@ -88,7 +88,7 @@ nibbles are to be read as:
      t: Pico 2 core temperature: °C *10, 12-bit, 2's complement integer
      0: bytes should be 0
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
-     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+     c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
         divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
@@ -110,7 +110,7 @@ For format=1 messages, the message nibbles are to be read as:
      g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
      p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
-     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+     c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
             divisor polynomial 0x97, no reflections or inversions
 
 When asserting/deasserting voltage to the signal pin, timing
@@ -378,7 +378,7 @@ class omni : public ISM_Device {
              g: sensor 2 humidity reading (e.g., outdoor), %RH as integer
              p: barometric pressure * 10, in hPa, 0..65535 hPa*10
              v: (VCC-3.00)*100, in volts,  000...255 volts*100
-             c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+             c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
                     divisor polynomial 0x97, no reflections or inversions
     */
     /* clang-format on */
@@ -396,7 +396,7 @@ class omni : public ISM_Device {
         msg[6] = (press >> 8) & 0xff;
         msg[7] = press & 0xff;
         msg[8] = volts & 0xff;
-        msg[9] = crc8(msg, 9, 0x00);
+        msg[9] = crc8(msg, 9, 0xaa);
         return;
     };
 
@@ -405,7 +405,7 @@ class omni : public ISM_Device {
             int16_t &oTemp, uint8_t &iHum, uint8_t &oHum, uint16_t &press,
             uint8_t &volts)
     {
-        if (msg[9] != crc8(msg, 9, 0x00)) {
+        if (msg[9] != crc8(msg, 9, 0xaa)) {
             DBG_println(
                     F("Attempt unpack of invalid message packet: CRC8 checksum error"));
             fmt   = 0;

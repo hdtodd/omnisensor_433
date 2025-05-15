@@ -1,5 +1,5 @@
 /** @file
-    Omni multi-sensor protocol, v1.0
+    Omni multi-sensor protocol, v1.1
 
     Copyright (C) 2025 H. David Todd <hdtodd@gmail.com>
 
@@ -20,7 +20,7 @@ The protocol is for the extensible wireless sensor 'omni'
 
 The 'sensor' is actually a programmed microcontroller (e.g.,
 Raspberry Pi Pico 2 or similar) with multiple possible data-sensor
-attachments.  A packet 'format' field indicates the format of the data
+attachments.  A message 'format' field indicates the format of the data
 packet being sent.
 
 NOTE: the rtl_433 decoder, omni.c, uses the "fmt" or "Format" field 
@@ -70,7 +70,7 @@ The message in each packet is 10 bytes / 20 nibbles:
 - data are 16 nibbles = 8 bytes of data payload fields,
       interpreted according to 'fmt'
 - crc8 is 2 nibbles = 1 byte of CRC8 checksum of the first 9 bytes:
-      polynomial 0x97, init 0x00
+      polynomial 0x97, init 0xaa
 
 A format=0 message simply transmits the core temperature and input power
 voltage of the microcontroller and is the format used if no data
@@ -84,7 +84,7 @@ nibbles are to be read as:
      t: Pico 2 core temperature: °C *10, 12-bit, 2's complement integer
      0: bytes should be 0
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
-     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+     c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
         divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
@@ -106,13 +106,14 @@ For format=1 messages, the message nibbles are to be read as:
      g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
      p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
-     c: CRC8 checksum of bytes 1..9, initial remainder 0x00,
+     c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
             divisor polynomial 0x97, no reflections or inversions
 */
 /* clang-format on */
 
 #include "decoder.h"
 
+#define initCRC 0xaa
 #define OMNI_MSGFMT_00 0x00
 #define OMNI_MSGFMT_01 0x01
 
@@ -137,9 +138,9 @@ static char const *const output_fields_01[] = {
         "temperature_C",
         "temperature_2_C",
         "humidity",
-        "humidity_2",
+        "light_level",
         "pressure_hPa",
-        "voltage_V",
+	"voltage_V",
         "mic",
         NULL,
 };
@@ -183,7 +184,7 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
     b = bitbuffer->bb[r];
 
     // Validate the packet against the CRC8 checksum
-    if (crc8(b, 9, 0x97, 0x00) != b[9]) {
+    if (crc8(b, 9, 0x97, initCRC) != b[9]) {
         decoder_log(decoder, 1, __func__, "Omni: CRC8 checksum error");
         return DECODE_FAIL_MIC;
     }
@@ -209,11 +210,10 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
             ptr += sprintf(ptr, "0x%02x ", b[ij]);
         itemp_c     = ((double)((int32_t)(((((uint32_t)b[1]) << 24) | ((uint32_t)(b[2]) & 0xF0) << 16)) >> 20)) / 10.0;
         volts       = ((double)(b[8])) / 100.0 + 3.00;
-
         // Make the data descriptor
         /* clang-format off */
 	data = data_make(
-	    "model",           "",                                               DATA_STRING, "omni",
+	    "model",           "",                                               DATA_STRING, "Omni",
 	    "id",              "Id",                                             DATA_INT,     id,
 	    "channel",         "Format",                                         DATA_INT,     message_fmt,
 	    "temperature_C"  , "Core Temperature",   DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  itemp_c, 
@@ -231,18 +231,18 @@ static int omni_decode(r_device *decoder, bitbuffer_t *bitbuffer)
         ihum        = (double)b[4];
         ohum        = (double)b[5];
         press       = (double)(((uint16_t)(b[6] << 8)) | b[7]) / 10.0;
-        volts       = ((double)(b[8])) / 100.0 + 3.00;
-
+	volts       = ((double)(b[8])) / 100.0 + 3.00;
         // Make the data descriptor
         /* clang-format off */
 	data = data_make(
-	    "model",           "",                                               DATA_STRING, "omni",
+	    "model",           "",                                               DATA_STRING, "Omni",
 	    "id",              "Id",                                             DATA_INT,     id,
 	    "channel",         "Format",                                         DATA_INT,     message_fmt,
 	    "temperature_C"  , "Indoor Temperature", DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  itemp_c, 
 	    "temperature_2_C", "Outdoor Temperature",DATA_FORMAT, "%.2f ˚C",     DATA_DOUBLE,  otemp_c, 
 	    "humidity",        "Indoor Humidity",    DATA_FORMAT, "%.0f %%",     DATA_DOUBLE,  ihum,
-	    "humidity_2",      "Outdoor Humidity",   DATA_FORMAT, "%.0f %%",     DATA_DOUBLE,  ohum,
+	    "Light %",         "Light",              DATA_FORMAT, "%.0f%%",      DATA_DOUBLE,  ohum,
+	    //	    "humidity_2",      "Outdoor Humidity",   DATA_FORMAT, "%.0f %%",     DATA_DOUBLE,  ohum,
 	    "pressure_hPa",    "BarometricPressure", DATA_FORMAT, "%.1f hPa",    DATA_DOUBLE,  press,
 	    "voltage_V",       "VCC voltage",        DATA_FORMAT, "%.2f V",      DATA_DOUBLE,  volts,
 	    "mic",             "Integrity",                                      DATA_STRING,  "CRC",

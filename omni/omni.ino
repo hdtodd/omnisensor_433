@@ -159,6 +159,10 @@ an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
 #define SERIALP Serial
 #endif
 
+#ifdef PICO_RP2350
+#define SERIALP Serial
+#endif
+
 #define DEBUG // SET TO #undef to disable execution trace
 
 #ifdef DEBUG

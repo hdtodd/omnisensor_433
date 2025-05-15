@@ -32,7 +32,9 @@ Congratulations!  At this point, you have successfully implemented a remote sens
 
 ## Adding Sensor Data
 
-If you have a Bosch BME68x environmental sensor, the `omni.ino` code is prepared to report its readings.  As programmed, `omni` uses the I2C interface to the BME68x, but SPI is a compile-time option.  
+If you have no sensors attached, the `omni.ino` code will simply report the internal temperature of the Pico2 and its VCC supply voltage.  
+
+If you have a Bosch BME68x environmental sensor attached to the microcontroller, the `omni.ino` code will report its readings.  As programmed, `omni` uses the I2C interface to the BME68x, but SPI is a compile-time option.  
 
 For I2C, if you have a Pico with a Qwiic/STEMMA connector, it's easiest to use that to connect your Pico to your BME68x -- just one cable and connector.  Simply connect the BME68x into your Pico 2 and restart or reload the Pico 2.  
 

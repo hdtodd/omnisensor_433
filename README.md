@@ -251,7 +251,7 @@ If the message passes those validation tests, the message format number is extra
 
 | Version | Changes |
 |---------|---------|
-| V1.1    | 2025.05.14 Changed CRC-8 'init' from 0x00 to 0xaa, following a recommendation, by Christian Zuckschwerdt, reviewing Williams' recommendation not to use 0x00 as 'init', and modeling reliability of error detection in the event of block error insertions [ISMErrDetect](https://github.com/hdtodd/ISMErrDetect).|
+| V1.1    | 2025.05.14 Changed CRC-8 'init' from 0x00 to 0xaa, following a recommendation by Christian Zuckschwerdt, reviewing Williams' recommendation not to use 0x00 as 'init', and modeling reliability of error detection in the event of block error insertions [ISMErrDetect](https://github.com/hdtodd/ISMErrDetect).|
 | V1.0    | 2025.02.10 First operational version. |
 
 ## Author

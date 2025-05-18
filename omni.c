@@ -88,22 +88,21 @@ nibbles are to be read as:
         divisor polynomial 0x97, no reflections or inversions
 
 A format=1 message format is provided as a more complete example.
-It uses the Bosch BME688 environmental sensor as a data source.
 It is an indoor-outdoor temperature/humidity/pressure sensor, and the
 message packet has the following fields:
-    indoor temp, outdoor temp, indoor humidity, outdoor humidity,
+    indoor temp, outdoor temp, indoor humidity, light intensity (%),
     barometric pressure, sensor power VCC.
 The data fields are binary values, 2's complement for temperatures.
 For format=1 messages, the message nibbles are to be read as:
 
-     fi 11 12 22 hh gg pp pp vv cc
+     fi 11 12 22 hh ll pp pp vv cc
 
      f: format of datagram, 0-15
      i: id of device, 0-15
      1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
      2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
      h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
-     g: sensor 2 humidity reading (e.g., outdoor), %RH as 8-bit integer
+     l: light intensity %,  as 8-bit integer
      p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
      c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,

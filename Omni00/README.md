@@ -11,7 +11,7 @@ This program, 'Omni00.py', demonstrates how to do that decoding.
 
 To get started, you will need a system that runs the 'omnisensor' code in this repository:
 *  a system running `rtl_433`; ensure that the 'omni' protocol is supported (protocol number 277);
-*  a microcontroller system running 'omni.ino' or ('WP_433.ino')[http://github.com/hdtodd/WP_433].
+*  a microcontroller system running 'omni.ino' or ['WP_433.ino'](http://github.com/hdtodd/WP_433).
 
 Then:
 *  Modify the '.ino' code to use "fmt=0" rather than "fmt=1" and download that code to the microcontroller.

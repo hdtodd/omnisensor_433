@@ -18,7 +18,7 @@ Then:
 *  Confirm that the `rtl_433` server is receiving the microcontroller broadcasts by monitoring its JSON MQTT feed with a command such as `mosquitto_sub -h <your rtl_433 server> -t "rtl_433/<your rtl_433 server>/events"`; watch for publications by "Omni Multisensor" on channel 0 (the '.ino' "fmt" value is reported as "channel" by `rtl_433`' "omni.c" decoder); you should see a field labeled "payload" with 16 hexadecimal nibbles (8 bytes);
 *  Start the Python script in this repository with "./Omni00.py"; you should see *just* the "Omni Multisensor" broadcasts, but with both the hexadecimial payload data *and* the decoded data fields; verify that the data are correct by referring back to the Arduino IDE display of data being transmitted by the microcontroller.
 
-For example, on the Arduino IDE serial monitor display, you might see:
+For example, on the Arduino IDE serial monitor display window, you might see:
 ```
 11:44:53.445 -> Transmit msg 5219	iTemp=22.40˚C, oTemp=21.50˚C, iHum=45.00%, light=50.00%, Press=1003.70hPa, VCC=4.88volts	in hex: 0x 09 0E 00 D7 2D 32 27 35 BC 91 
 11:44:53.445 -> 	The msg packet, length=80, as a string of bits: 00001001000011100000000011010111001011010011001000100111001101011011110010010001

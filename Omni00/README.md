@@ -3,7 +3,7 @@
 
 Omnisensor\_433 supports transmission of data from multiple sensors and types of sensors to an rtl\_433 receiving system from a single microcontroller using a single, flexible `rtl_433` message transmission protocol.
 
-However, the 'omni' decoder for `rtl_433` was also designed to support "pass-through" transmission of data from the microcontroller to the end-consumer process without requiring modifications to the `rtl_433` 'omni.c' decoder.  Messages formatted as "format 0" ("fmt=1" in the .ino code) are published in JSON format by 'omni.c' as an 8-byte hexadecimal data payload. The data fields encoded by the microcontroller can be decoded into the appropriate fields by the end-consuming process from that hexadecimal string.
+However, the 'omni' decoder for `rtl_433` was also designed to support "pass-through" transmission of data from the microcontroller to the end-consumer process without requiring modifications to the `rtl_433` 'omni.c' decoder.  Messages formatted as "format 0" ("fmt=0" in the .ino code) are published in JSON format by 'omni.c' as an 8-byte hexadecimal data payload. The data fields encoded by the microcontroller can be decoded into the appropriate fields by the end-consuming process from that hexadecimal string.
 
 This program, 'Omni00.py', demonstrates how to do that decoding.
 

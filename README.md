@@ -86,8 +86,8 @@ So ISM_Emulator (http://github.com/hdtodd/ISM_Emulator) provides an easy way to 
 Broadly speaking, to add your own sensor data to the `omni` system, you'll need to:
 
 *  modify `omni.ino` to collect data from your physical sensors and encode them in an 8-byte data packet, and either:
-*  modify the `rtl_433` file `./src/devices/omni.c` to decode that encoded packet,
-*  or write code on a third computer system to receive MQTT JSON packets and decode the hexadecimal string that represents your data (using format `fmt=0` as the format of data transmitted by `omni.ino`).
+*  (optionally) modify the `rtl_433` file `./src/devices/omni.c` to decode that encoded packet,
+*  or write code on a third computer system to receive MQTT JSON packets and decode the hexadecimal string that represents your data (using format `fmt=0` as the format of data transmitted by `omni.ino`).  __See the "Omni00" directory in this repository for a model that will help you implement that quickly.__
 
 Since the starting point for either approach is to encode your data on the microcontroller, we'll start there with the details:
 
@@ -136,9 +136,9 @@ You may receive data from the sensor as BCD (binary-coded decimal).  And if the 
 
 ### Using Your Transmitted Data -- Simple Approach
 
-The simplest approach to using the data transmitted from your microcontroller-sensor(s) on another computer would be to decode that data on the other computer.  The `fmt=0` messages in `omni` nominally represent a 3-nibble temperature, 2-nibble voltage, and 11 nibbles of 0's (unused).  But the `omni` decoder, as distributed, reports the full 8-byte data string in hexadecimal.  So, in fact, the simplest approach is to record your data fields in the full 8 bytes of a `fmt=0` packet on the microcontroller, allow `rtl_433` to receive and, via MQTT, publish the packet as its full hexadecimal string, which allows any other computer on that network to subscribe to the MQTT feed, look for `omni` protocol messages of `fmt=0` type, and decode the hexadecimal string using the decoder that you wrote for prototyping.
+The simplest approach to using the data transmitted from your microcontroller-sensor(s) on another computer would be to decode that data on the other computer.  The `fmt=0` messages in `omni` nominally represent a 3-nibble temperature, 2-nibble voltage, and 11 nibbles of 0's (unused).  But the `omni` decoder, as distributed, reports the full 8-byte data string in hexadecimal.  So, in fact, the simplest approach is to record your data fields in the full 8 bytes of a `fmt=0` packet on the microcontroller, allow `rtl_433` to receive and, via MQTT, publish the packet as its full hexadecimal string, which allows any other computer on that network to subscribe to the MQTT feed, look for `omni` protocol messages of `fmt=0` type, and decode the hexadecimal string using the decoder that you wrote for prototyping.  __See the "Omni00" directory in this repository for a model that will help you implement that quickly.__
 
-This approach would allow you to use any other computer on the network, using any language from which you can subscribe to MQTT publications, to decode and process the transmittd data.  This simple approach avoids the need to test and implement the `omni.c` decoder for `rtl_433`, and then update it in the case of future releases of `omni.c` conflicting with your customizations.
+This approach would allow you to use any other computer on the network, using any language from which you can subscribe to MQTT publications, to decode and process the transmitted data.  This simple approach avoids the need to test and implement the `omni.c` decoder for `rtl_433`, and then update it in the case of future releases of `omni.c` conflicting with your customizations.
 
 ### Writing Your Own `rtl_433` Decoder -- Not-So-Simple Approach
 
@@ -240,7 +240,6 @@ For format=1 messages, the message nibbles are to be read as:
      v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
      c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
         divisor polynomial 0x97, no reflections or inversions
-
 
 ## How It Works
 

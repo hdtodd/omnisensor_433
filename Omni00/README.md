@@ -20,13 +20,16 @@ Then:
 
 For example, on the Arduino IDE serial monitor display window, you might see:
 ```
-11:44:53.445 -> Transmit msg 5219	iTemp=22.40˚C, oTemp=21.50˚C, iHum=45.00%, light=50.00%, Press=1003.70hPa, VCC=4.88volts	in hex: 0x 09 0E 00 D7 2D 32 27 35 BC 91 
+11:44:53.445 -> Transmit msg 5219	iTemp=22.40˚C, oTemp=21.50˚C, iHum=45.00%,
+light=50.00%, Press=1003.70hPa, VCC=4.88volts	in hex: 0x 09 0E 00 D7 2D 32 27 35 BC 91 
 11:44:53.445 -> 	The msg packet, length=80, as a string of bits: 00001001000011100000000011010111001011010011001000100111001101011011110010010001
 ```
 
 and from `mosquitto_subscribe` you would see:
 ```
-{"time":"2025-05-26 11:44:53","protocol":277,"model":"Omni Multisensor","id":9,"channel":0,"temperature_C":22.4,"voltage_V":4.88,"payload":"0e00d72d322735bc","mic":"CRC","mod":"ASK","freq":433.93354,"rssi":-0.259911,"snr":21.52537,"noise":-21.7853}
+{"time":"2025-05-26 11:44:53","protocol":277,"model":"Omni Multisensor","id":9,"channel":0,"temperature_C":22.4,"voltage_V":4.88,
+"payload":"0e00d72d322735bc","mic":"CRC","mod":"ASK","freq":433.93354,
+"rssi":-0.259911,"snr":21.52537,"noise":-21.7853}
 ```
 
 and from `Omni00.py` you would see:

@@ -252,6 +252,7 @@ If the message passes those validation tests, the message format number is extra
 
 | Version | Changes |
 |---------|---------|
+| V2.0    | 2025.05.25 Updated `omni.c` to the version that will be merged into `rtl_433` mainstream.  Added `Omni00` to demonstrate how to decode format 00 (channel 0) messages into original data fields in Python. |
 | V1.2    | 2025.05.15 Changed "humidity_2" (variable oHum) to "light" to align with the `rtl_433` "omni.c" driver definitions and the Arduino weather probe [WP_433](http://github.com/hdtodd/WP_433); updated comments |
 | V1.1    | 2025.05.14 Changed CRC-8 'init' from 0x00 to 0xaa, following a recommendation by Christian Zuckschwerdt, reviewing Williams' recommendation not to use 0x00 as 'init', and modeling reliability of error detection in the event of block error insertions [ISMErrDetect](https://github.com/hdtodd/ISMErrDetect).|
 | V1.0    | 2025.02.10 First operational version. |

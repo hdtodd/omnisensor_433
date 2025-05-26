@@ -129,8 +129,8 @@ For format=1 messages, the message nibbles are to be read as:
 
 | Version | Changes |
 |---------|---------|
-| V1.0    | 2025.06.01 First operational version. |
+| V1.0    | 2025.05.27 First operational version. |
 
 ## Author
 
-Written by David Todd, hdtodd@gmail.com, 2025.05
+Written by David Todd, hdtodd@gmail.com, 2025.05.27

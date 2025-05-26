@@ -40,7 +40,7 @@ and from `Omni00.py` you would see:
 
 ## Adding Your Own Sensor Data
 
-Follow the guidance in the `omnisensor_433` README in this repository for encoding your fields on your microcontroller.  Use "fmt = 0" as the Omni Multisensor protocol format ("channel" number as reported by the `rtl_433` decoder).  Download your '.ino' file to your microcontroller.
+Follow the guidance in the `omnisensor_433` README in this repository for encoding your fields on your microcontroller.  Use "fmt = 0" as the Omni Multisensor protocol format (reported by the `rtl_433` decoder as "channel" number).  Download your '.ino' file to your microcontroller.
 
 Verify that the broadcasts from your microcontroller are being received and processed by `rtl_433` by monitoring the MQTT publications with the `mosquitto_sub` command above.
 

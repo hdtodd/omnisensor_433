@@ -1,4 +1,4 @@
-# omnisensor_433 v1.2
+# omnisensor_433 v2.0
 ## A Multi-Sensor System Based on `rtl_433`
 
 Omnisensor\_433 supports transmission of data from multiple sensors and types of sensors to an rtl\_433 receiving system from a single microcontroller using a single, flexible `rtl_433` message transmission protocol.

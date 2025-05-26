@@ -16,7 +16,7 @@ To get started, you will need a system that runs the 'omnisensor' code in this r
 Then:
 *  Modify the '.ino' code to use "fmt=0" rather than "fmt=1" and download that code to the microcontroller.
 *  Confirm that the `rtl_433` server is receiving the microcontroller broadcasts by monitoring its JSON MQTT feed with a command such as `mosquitto_sub -h <your rtl_433 server> -t "rtl_433/<your rtl_433 server>/events"`; watch for publications by "Omni Multisensor" on channel 0 (the '.ino' "fmt" value is reported as "channel" by `rtl_433`' "omni.c" decoder); you should see a field labeled "payload" with 16 hexadecimal nibbles (8 bytes);
-*  Start the Python script in this repository with "./Omni00.py"; you should see *just* the "Omni Multisenso" broadcasts, but with both the hexadecimial payload data *and* the decoded data fields; verify that the data are correct by referring back to the Arduino IDE display of data being transmitted by the microcontroller.
+*  Start the Python script in this repository with "./Omni00.py"; you should see *just* the "Omni Multisensor" broadcasts, but with both the hexadecimial payload data *and* the decoded data fields; verify that the data are correct by referring back to the Arduino IDE display of data being transmitted by the microcontroller.
 
 For example, on the Arduino IDE serial monitor display, you might see:
 ```

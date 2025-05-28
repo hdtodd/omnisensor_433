@@ -5,7 +5,7 @@ Omnisensor\_433 supports transmission of data from multiple sensors and types of
 
 The omnisensor_433 system includes:
 *  a microcontroller program, `omni.ino`, to collect sensor data and transmit it via an ISM-band (e.g., 433MHz) transmitter;
-*  an `rtl_433` decoder, `omni.c`, to decode those transmissions (included in the `rtl_433` repository;
+*  an `rtl_433` decoder, `omni.c`, to decode those transmissions (included in the `rtl_433` repository);
 *  a flexible protocol that enables up to 16 different formats for the transmitted 8-byte data payload.
 
 ## Getting Started

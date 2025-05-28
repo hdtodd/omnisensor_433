@@ -1,17 +1,17 @@
-# omnisensor_433 v2.0
+# omnisensor_433 v2.1
 ## A Multi-Sensor System Based on `rtl_433`
 
 Omnisensor\_433 supports transmission of data from multiple sensors and types of sensors to an rtl\_433 receiving system from a single microcontroller using a single, flexible `rtl_433` message transmission protocol.
 
 The omnisensor_433 system includes:
 *  a microcontroller program, `omni.ino`, to collect sensor data and transmit it via an ISM-band (e.g., 433MHz) transmitter;
-*  an `rtl_433` decoder, `omni.c`, to decode those transmissions;
+*  an `rtl_433` decoder, `omni.c`, to decode those transmissions (included in the `rtl_433` repository;
 *  a flexible protocol that enables up to 16 different formats for the transmitted 8-byte data payload.
 
 ## Getting Started
 
 To get started, you will need:
-*  a system running `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ ;
+*  a system running an up-to-date version of `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ if just starting; ensure that protocol 277, "Omni Multisensor", is supported;
 *  a Raspberry Pi Pico 2 microcontroller (not tested, but should work on Pico 1 as well; may interfere with WiFi on Pico w models);
 *  a computer system running the Arduino IDE with Pico 2 support installed (https://github.com/earlephilhower/arduino-pico);
 *  a 433MHz transmitter (or other ISM-band frequency legal in your locale): available from Amazon, for example, for ~$2US.
@@ -19,14 +19,13 @@ To get started, you will need:
 Then follow these steps:
 1.  `git clone` the omnisensor\_433 package (http://github.com/hdtodd/omnisensor_433).
 2.  Connect pin 4 of the Pico 2 to the data pin of your transmitter; transmitter GND to Pico GND; transmitter VCC to Pico VSYS or 3V3.
-3.  Copy the `omni.c` decoder file into the `rtl_433/src/devices` directory on your rtl_433 system.   Stop any instances of `rtl_433` you might already have running on that system.  Follow the instructions for installing a new decoder into `rtl_433` (see the section "How to add the decoder and write new code" in https://github.com/merbanan/rtl_433/wiki/Adding-a-new-remote-device-and-writing-the-decoder-C-code and the build instructions in https://github.com/merbanan/rtl_433/blob/master/docs/BUILDING.md ).  Build a new `rtl_433` that will include the `omni` decoder.
-4.  Verify that `omni` is one of the protocols your new `rtl_433` will recognize and decode: `rtl_433 -R help` will list all the protocols; "__Omni Multisensor__" should be near the end of that list.
-5.  Copy the `omni.ino` program into a folder named `omni` in the main Arduino folder on the computer running Arduino IDE.  Install the Arduino libraries for `Wire`, `Adafruit_BME680`, `Adafruit_Sensor`, and `SPI` if not previously installed.
-6.  Connect the Pico 2 via USB into the computer running the Arduino IDE.
-7.  Open the `omni.ino` file in the Arduino IDE; set the device type to Pico 2 and the port to the USB port to which the Pico 2 is attached; compile and download the `omni.ino` code into the Pico 2.
-8.  Open the Arduino IDE monitoring screen to verify that the Pico 2 is composing and transmitting messages.
-9.  Start your *new* `rtl_433` with `rtl_433 -R <omni protocol number> -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
-10.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file: the only change will be that it now reports packets it receives from an `omni` device with a format that matches those that it knows about.
+3.  Verify that "Omni Multisensor" is one of the protocols your `rtl_433` will recognize and decode: `rtl_433 -R help` will list all the protocols; protocol 277, "__Omni Multisensor__", should be near the end of that list.
+4.  Copy the `omni.ino` program into a folder named `omni` in the main Arduino folder on the computer running Arduino IDE.  Install the Arduino libraries for `Wire`, `Adafruit_BME680`, `Adafruit_Sensor`, and `SPI` if not previously installed.
+5.  Connect the Pico 2 via USB into the computer running the Arduino IDE.
+6.  Open the `omni.ino` file in the Arduino IDE; set the device type to Pico 2 and the port to the USB port to which the Pico 2 is attached; compile and download the `omni.ino` code into the Pico 2.
+7.  Open the Arduino IDE monitoring screen to verify that the Pico 2 is composing and transmitting messages.
+8.  Start rtl_433 with `rtl_433 -R 277 -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
+9.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file.
 
 Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, its VCC (VSYS) USB voltage in volts, and the hexadecimal string that represents the full 8 *data* bytes of your transmitted message.
 
@@ -100,11 +99,11 @@ Since the starting point for either approach is to encode your data on the micro
 4.  Then, for each field, note from the first step the format you plan to use to represent the data in the transmitted packet.
 5.  For the packet, lay out the assignment of each of the fields in the 8-byte message packet.  You'll likely find it most convenient to map the fields to the message packet as 16 4-bit nibbles (see below for an example).
 6.  Write the program statements needed to encode each of those data fields into the message packet.  You'll likely use binary shifts, ANDs and ORs to combine source data values into message bytes.
-7.  Write the program statements needed to *decode* each of the data fields from the message packet. You'll need that code for the `omni.c` decoder for `rtl_433` or for the MQTT JSON packet decoder, should you choose to take that approach for processing the transmitted data.  Be particularly careful of manipulations that convert unsigned bit fields to signed (2's complement) integers.  You'll need to manipulate the fields with shifts, ANDs, and ORs so that the packed *unsigned* data are left-aligned in the integer (16- or 32-bit), convert to `int32_t` or `int16_t`, and then shift right (if the data field is less than 16 or 32 bits).  See example below.
+7.  Write the program statements needed to *decode* each of the data fields from the message packet. You'll need that code for the MQTT JSON packet decoder on the end-consumer system, or for the `omni.c` decoder for `rtl_433` should you choose to take that approach for processing the transmitted data.  Be particularly careful of manipulations that convert unsigned bit fields to signed (2's complement) integers.  You'll need to manipulate the fields with shifts, ANDs, and ORs so that the packed *unsigned* data are left-aligned in the integer (16- or 32-bit), convert to `int32_t` or `int16_t`, and then shift right (if the data field is less than 16 or 32 bits).  See example below.
 8.  Build a prototype in C++ to test your encoding/decoding procedures:
     *  Make a copy of `prototypes/omni.cpp` in your ISM_Emulator github clone, with a different file name.
     *  Replace the encoding/decoding statements in `pack_msg()` / `unpack_msg()` procedures with those you wrote for your own encoding and decoding, using the names of the data fields you've chosen.
-    *  *Don't change the signal timing.*
+    *  __*Don't change the signal timing.*__
     *  In `main()`, change the code to use the names of the data fields your sensor(s) are supplying and provide reasonable values for those sensor readings (be sure to include negative values if those are possible sensor readings);  change the invocation of `om` pack/unpack procedures to use your sensor data field names.
 9.  Compile and run your prototype C++ program (you may need `-std=c++11` as a C++ compiler option).
 10.  You should see a detailed report on the data values you've encoded, the encoded message, the values as they've been decoded, the hexadecimal representation of the full 10-byte message, and the signal pulse/gap timings that `omni` will generate through the transmitter. Verify that the reported values match what you intended to send. The message format, in nibbles, is:
@@ -134,6 +133,38 @@ If the 8 bytes seems too few to carry the data you want to send, look for ways t
 
 You may receive data from the sensor as BCD (binary-coded decimal).  And if the 8-byte data payload is not a constraint, it might be best to simply encode the BCD in the message packet that way rather than manipulate the data in the microcontroller to reformat it.  But if the payload size is a constraint, consider converting the BCD to an unsigned int representation or to a signed 2's complement field.  
 
+### Unpacking Messages
+
+Unpacking messages may be somewhat complicated, depending upon how your data is fragmented across message bytes and the format of the extracted data. You may need to pay particular attention to preserving the sign of two's complement values.  Here's a short example.
+
+Omnisensor\_433 `fmt=1` messages transmit 2 temperatures (indoor and outdoor), humidity, etc..  The temperatures are represented as 16-bit __two's-complement__ integers.  The message format for `fmt=1` is:
+
+```
+     fi 11 12 22 hh ll pp pp vv cc
+
+     f: format of datagram, 0-15
+     i: id of device, 0-15
+     1: sensor 1 temp reading (e.g, indoor),  °C *10, 12-bit, 2's complement integer
+     2: sensor 2 temp reading (e.g, outdoor), °C *10, 12-bit, 2's complement integer
+     h: sensor 1 humidity reading (e.g., indoor),  %RH as 8-bit integer
+     l: light intensity % as 8-bit integer
+     p: barometric pressure * 10, in hPa, as 16-bit integer, 0..6553.5 hPa
+     v: (VCC-3.00)*100, as 8-bit integer, in volts: 3V00..5V55 volts
+     c: CRC8 checksum of bytes 1..9, initial remainder 0xaa,
+            divisor polynomial 0x97, no reflections or inversions
+
+```
+
+So, unpacking the 12-bit sensor 1 temperature ("iTemp") reading needs to combine the 8 bits of byte [1]  with the *left 4 bits* of byte [2], __left-justified__ in a 16-bit integer value, then right-shifted by 4 bits to preserve the sign of the value (since it is a two's-complement (signed) value).  Similar manipulations are required for sensor 2 temperature.
+
+The resulting code for unpacking the fields is:
+
+```
+            iTemp = ((int16_t)((((uint16_t)msg[1]) << 8) | (uint16_t)msg[2])) >> 4;
+            oTemp =
+                    ((int16_t)((((uint16_t)msg[2]) << 12) | ((uint16_t)msg[3]) << 4)) >> 4;
+```
+
 ### Using Your Transmitted Data -- Simple Approach
 
 The simplest approach to using the data transmitted from your microcontroller-sensor(s) on another computer would be to decode that data on the other computer.  The `fmt=0` messages in `omni` nominally represent a 3-nibble temperature, 2-nibble voltage, and 11 nibbles of 0's (unused).  But the `omni` decoder, as distributed, reports the full 8-byte data string in hexadecimal.  So, in fact, the simplest approach is to record your data fields in the full 8 bytes of a `fmt=0` packet on the microcontroller, allow `rtl_433` to receive and, via MQTT, publish the packet as its full hexadecimal string, which allows any other computer on that network to subscribe to the MQTT feed, look for `omni` protocol messages of `fmt=0` type, and decode the hexadecimal string using the decoder that you wrote for prototyping.  __See the "Omni00" directory in this repository for a model that will help you implement that quickly.__
@@ -161,7 +192,7 @@ Now, back in `omni.c`, you need to make the following additions:
     *  Invoke `data_make()` to list the JSON labels `rtl_433` will report, the format for displaying your data fields, and the names of the fields into which you decoded your data.  You can simply copy the list from `case OMNI_MSGFMT_01` and replace lines `temperature_C` through `voltage_V` with your list of descriptors and fields, editing the formatting descriptors as necessary.
     *  Don't forget to end your `case` section with a `break;`.
 4.  `cd` to your `rtl_433` directory and rebuild `rtl_433` (`cmake ...`).
-5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 275 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
+5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 277 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
 6.  Edit to correct the decoding statements in your `omni.c` file if the data values reported by `rtl_433` don't match those your on the Arduino IDE monitor window for your microcontroller (double-check by decoding the the hexadecimal string manually if necessary).
 7.  When the values reported by `rtl_433` match those sent by your microcontroller, install your new `rtl_433` for production and restart with your standard configuration file.
 
@@ -251,6 +282,7 @@ If the message passes those validation tests, the message format number is extra
 
 | Version | Changes |
 |---------|---------|
+| V2.1    | 2025.05.28 Updated documentation to remove instructions for installing `omni.c` decoder as it is now part of the `rtl_433` repository. |
 | V2.0    | 2025.05.25 Updated `omni.c` to the version that will be merged into `rtl_433` mainstream.  Added `Omni00` to demonstrate how to decode format 00 (channel 0) messages into original data fields in Python. |
 | V1.2    | 2025.05.15 Changed "humidity_2" (variable oHum) to "light" to align with the `rtl_433` "omni.c" driver definitions and the Arduino weather probe [WP_433](http://github.com/hdtodd/WP_433); updated comments |
 | V1.1    | 2025.05.14 Changed CRC-8 'init' from 0x00 to 0xaa, following a recommendation by Christian Zuckschwerdt, reviewing Williams' recommendation not to use 0x00 as 'init', and modeling reliability of error detection in the event of block error insertions [ISMErrDetect](https://github.com/hdtodd/ISMErrDetect).|

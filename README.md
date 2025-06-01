@@ -11,7 +11,7 @@ The omnisensor_433 system includes:
 ## Getting Started
 
 To get started, you will need:
-*  a system running an up-to-date version of `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ if just starting; ensure that protocol 277, "Omni Multisensor", is supported;
+*  a system running an up-to-date version of `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ if just starting (Note that you'll need to Git pull from PR #3278 branch until omni support is merged); ensure that protocol 277, "Omni Multisensor", is supported;
 *  a Raspberry Pi Pico 2 microcontroller (not tested, but should work on Pico 1 as well; may interfere with WiFi on Pico w models);
 *  a computer system running the Arduino IDE with Pico 2 support installed (https://github.com/earlephilhower/arduino-pico);
 *  a 433MHz transmitter (or other ISM-band frequency legal in your locale): available from Amazon, for example, for ~$2US.

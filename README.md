@@ -64,6 +64,8 @@ Once restarted, `omni` will print readings on the Arduino IDE monitor window, an
 
 If you prefer to use SPI to connect the Pico 2 to the BME68x, you'll need to edit the `omni.ino` code before the `setup()` section to select SPI rather than I2C and wire the Pico to the BME68x using the SPI pins.
 
+Calibrate your temperature and barometric pressure readings against local sources (US Weather Service, for example) and use the \#define'd parameters `BME_TEMP_OFFSET` and `BME_PRESS_OFFSET` to correct your BME readings to match your external sources.
+
 ## Adding Your Own Sensor System
 
 Omnisensor\_433 is a development foundation that supports implementation of a variety of sensor types within a fixed signaling protocol.  The signaling protocol (pulse and gap timing) is fixed: the `.ino` microcontroller code transmits a pattern that the `rtl_433` program recognizes and passes on to the decoder module, `omni.c`.  Within that framework, the microcontroller can be programmed to deliver 8-data-byte packets in up to 16 different formats.  And, of course, data from multiple sensor types can be combined into a single type of data packet, and longer readings from a single sensor could be transmitted via multiple packets with different formats.

@@ -1,6 +1,6 @@
 /* -*- mode: c++ ; indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 
-    omni.ino v1.2
+    omni.ino v1.3
 
 /** @file
     Omni multi-sensor protocol.
@@ -104,6 +104,11 @@ absence of a light sensor such as the OSIP Light-01 sensor,
 , it uses 50% as the light intensity value.  Substitute
 your own sensor library procedure calls to accommodate
 other sensor types.
+
+Calibrate your temperature and barometric pressure against local 
+sources (US Weather Service, for example) and use 
+BME_TEMP_OFFSET and BME_PRESS_OFFSET to correct the readings
+from your BME sensor.
 
 The message packet has the following fields:
     indoor temp, outdoor temp, indoor humidity, light intensity,
@@ -213,7 +218,8 @@ an external thermometer.  The DEFINEd parameter 'BME_TEMP_OFFSET'
 #define BME_CS               10
 
 #define SEALEVELPRESSURE_HPA (1013.25)    // Standard conversion constant
-#define BME_TEMP_OFFSET      (-1.7 / 1.8) // Calibration offset in Fahrenheit
+#define BME_TEMP_OFFSET      (0)          // Calibration offset in Celsius
+#define BME_PRESS_OFFSET     (184)        // hPa adjust to calibrate to US Weather Svc
 
 /* "SIGNAL_T" are the possible signal types.  Each signal has a
     type (index), name, duration of asserted signal high), and duration of
@@ -539,7 +545,7 @@ void loop(void)
         otemp = (uint16_t)((analogReadTemp() + 0.05) * 10.0);
         ihum  = (uint16_t)(bme.humidity + 0.5); // round
         light = 50;  //No Light-01 sensor on this setup
-        press = (uint16_t)(bme.pressure / 10.0);         // hPa * 10
+        press = (uint16_t)( bme.pressure / 10.0 + BME_PRESS_OFFSET );  // hPa * 10
         voc   = (uint16_t)(bme.gas_resistance / 1000.0); // KOhms
         volts =
                 (uint8_t)(100.0 * (((float)analogRead(VSYSPin)) / RES * 3.0 * 3.3 - 3.0) +

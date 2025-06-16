@@ -11,7 +11,7 @@ The omnisensor_433 system includes:
 ## Getting Started
 
 To get started, you will need:
-*  a system running an up-to-date version of `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ if just starting (Note that you'll need to Git pull from PR #3278 branch until omni support is merged); ensure that protocol 277, "Omni Multisensor", is supported;
+*  a system running an up-to-date version of `rtl_433` (RTL-SDR dongle and `rtl_433` software installed and operational); clone http://github.com/merbanan/rtl_433/ if just starting (Note that you'll need to Git pull from PR #3278 branch until omni support is merged); ensure that protocol 278, "Omni Multisensor", is supported;
 *  a Raspberry Pi Pico 2 microcontroller (not tested, but should work on Pico 1 as well; may interfere with WiFi on Pico w models);
 *  a computer system running the Arduino IDE with Pico 2 support installed (https://github.com/earlephilhower/arduino-pico);
 *  a 433MHz transmitter (or other ISM-band frequency legal in your locale): available from Amazon, for example, for ~$2US.
@@ -19,12 +19,12 @@ To get started, you will need:
 Then follow these steps:
 1.  `git clone` the omnisensor\_433 package (http://github.com/hdtodd/omnisensor_433).
 2.  Connect pin 4 of the Pico 2 to the data pin of your transmitter; transmitter GND to Pico GND; transmitter VCC to Pico VSYS or 3V3.
-3.  Verify that "Omni Multisensor" is one of the protocols your `rtl_433` will recognize and decode: `rtl_433 -R help` will list all the protocols; protocol 277, "__Omni Multisensor__", should be near the end of that list.
+3.  Verify that "Omni Multisensor" is one of the protocols your `rtl_433` will recognize and decode: `rtl_433 -R help` will list all the protocols; protocol 278, "__Omni Multisensor__", should be near the end of that list.
 4.  Copy the `omni.ino` program into a folder named `omni` in the main Arduino folder on the computer running Arduino IDE.  Install the Arduino libraries for `Wire`, `Adafruit_BME680`, `Adafruit_Sensor`, and `SPI` if not previously installed.
 5.  Connect the Pico 2 via USB into the computer running the Arduino IDE.
 6.  Open the `omni.ino` file in the Arduino IDE; set the device type to Pico 2 and the port to the USB port to which the Pico 2 is attached; compile and download the `omni.ino` code into the Pico 2.
 7.  Open the Arduino IDE monitoring screen to verify that the Pico 2 is composing and transmitting messages.
-8.  Start rtl_433 with `rtl_433 -R 277 -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
+8.  Start rtl_433 with `rtl_433 -R 278 -F json:`; monitor that console for packets transmitted by the Pico 2 and confirm that the hexadecimal string received by `rtl_433` matches the string transmitted by the Pico 2.
 9.  When you've verified that the data are being correctly sent and received, you can restart `rtl_433` with your normal configuration file.
 
 Congratulations!  At this point, you have successfully implemented a remote sensor transmitter and rtl_433 receiver/decoder.  With no sensor attached, the Pico 2 is simply reporting its core temperature, in ˚Centigrade, its VCC (VSYS) USB voltage in volts, and the hexadecimal string that represents the full 8 *data* bytes of your transmitted message.
@@ -53,7 +53,7 @@ and restart.
 
 Once restarted, `omni` will print readings on the Arduino IDE monitor window, and monitoring MQTT messages from `rtl_433` will report the readings from device `omni`:
 ```
-{"time":"2025-05-15 17:14:21","protocol":277,"model":"Omni","id":9,
+{"time":"2025-05-15 17:14:21","protocol":278,"model":"Omni","id":9,
 "channel":1,"temperature_C":24.7,"temperature_2_C":23.9,"humidity":46.0,
 "Light %":50.0,"pressure_hPa":993.0,"voltage_V":4.84,"mic":"CRC",
 "mod":"ASK","freq":433.93389,"rssi":-0.217957,"snr":25.32009,"noise":-25.538}
@@ -194,7 +194,7 @@ Now, back in `omni.c`, you need to make the following additions:
     *  Invoke `data_make()` to list the JSON labels `rtl_433` will report, the format for displaying your data fields, and the names of the fields into which you decoded your data.  You can simply copy the list from `case OMNI_MSGFMT_01` and replace lines `temperature_C` through `voltage_V` with your list of descriptors and fields, editing the formatting descriptors as necessary.
     *  Don't forget to end your `case` section with a `break;`.
 4.  `cd` to your `rtl_433` directory and rebuild `rtl_433` (`cmake ...`).
-5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 277 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
+5.  Stop `rtl_433` if you have one running.  Run your new `rtl_433` with `sudo ./build/src/rtl_433 -R 278 -F json: -c` and watch for your microcontroller sensor data to be reported, with your data fields and your `fmt=nn`.  (The trailing `-c` overrides any configuration file you may have set up as a production environment.)
 6.  Edit to correct the decoding statements in your `omni.c` file if the data values reported by `rtl_433` don't match those your on the Arduino IDE monitor window for your microcontroller (double-check by decoding the the hexadecimal string manually if necessary).
 7.  When the values reported by `rtl_433` match those sent by your microcontroller, install your new `rtl_433` for production and restart with your standard configuration file.
 
